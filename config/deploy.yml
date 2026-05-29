@@ -1,0 +1,65 @@
+# Subly — Telegram subtitle-translation bot, deployed to a single VM with Kamal 2.
+#
+# The bot uses Telegram long polling (bot.py -> app.run_polling), so it has NO
+# inbound HTTP surface. The role therefore runs with `proxy: false` — there's no
+# kamal-proxy in front of it and no HTTP health check; Kamal just keeps the
+# container running and restarts it on deploy. Outbound internet (to Telegram +
+# the LLM endpoint) is all it needs.
+
+service: subly
+image: zakariaf/subly
+
+# Single role, named `bot` for clarity. Kamal's primary role defaults to `web`,
+# so we point it at `bot` explicitly.
+primary_role: bot
+
+servers:
+  bot:
+    hosts:
+      - REPLACE_WITH_HOST_IP
+    proxy: false
+    cmd: python bot.py
+
+# Kamal logs in as a non-root user provisioned on the host with docker access.
+ssh:
+  user: deployer
+
+registry:
+  # Docker Hub. KAMAL_REGISTRY_PASSWORD is a Docker Hub access token (read/write),
+  # supplied via .kamal/secrets.
+  username: zakariaf
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+# Build amd64 so an Apple Silicon dev box cross-compiles (via QEMU) instead of
+# shipping an arm64 image the x86_64 server can't run. Adjust if your host is arm64.
+builder:
+  arch: amd64
+  cache:
+    type: registry
+
+env:
+  clear:
+    PYTHONUNBUFFERED: "1"
+    # Transcription: "local" (faster-whisper on this box, free, no key) or "openai".
+    TRANSCRIBE_BACKEND: local
+    WHISPER_MODEL: small          # tiny | base | small | medium | large-v3
+    # Translation via any OpenAI-compatible endpoint.
+    TRANSLATION_MODEL: gpt-4o-mini
+    # Full list of tunables lives in .env.example / subtrans/config.py — anything
+    # not set here falls back to the in-code defaults.
+  secret:
+    - TELEGRAM_BOT_TOKEN
+    # Needed only for LLM translation and/or TRANSCRIBE_BACKEND=openai.
+    - OPENAI_API_KEY
+
+# Persist the faster-whisper model cache across deploys so the model isn't
+# re-downloaded on every release. Harmless when TRANSCRIBE_BACKEND=openai.
+volumes:
+  - /opt/subly/whisper-cache:/root/.cache/huggingface
+
+# One container, replaced on deploy. The bot keeps per-chat settings in memory
+# (they reset on restart — see README), so there's nothing to drain.
+boot:
+  limit: 1
+  wait: 3
