@@ -1,0 +1,23 @@
+# Real deployment values for the `production` destination.
+#
+#   cp config/deploy.production.yml.example config/deploy.production.yml
+#   # edit in your host (and any overrides), then:
+#   kamal deploy -d production
+#
+# config/deploy.production.yml is GITIGNORED. Values here are merged OVER
+# config/deploy.yml (arrays like `hosts` are replaced, not appended).
+
+servers:
+  bot:
+    hosts:
+      - 203.0.113.10            # <-- your server's IP or hostname
+
+# Override anything else from config/deploy.yml as needed, e.g.:
+#
+# ssh:
+#   user: deployer
+#
+# env:
+#   clear:
+#     TRANSCRIBE_BACKEND: openai   # offload transcription instead of local Whisper
+#     WHISPER_MODEL: large-v3

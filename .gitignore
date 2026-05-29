@@ -2,6 +2,10 @@
 .env
 .kamal/secrets
 
+# Kamal — config/deploy.yml holds committed defaults; real per-environment
+# values live in config/deploy.<destination>.yml, which stays local.
+config/deploy.*.yml
+
 # Python
 __pycache__/
 *.py[cod]

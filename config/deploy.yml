@@ -1,38 +1,45 @@
 # Subly — Telegram subtitle-translation bot, deployed to a single VM with Kamal 2.
 #
+# This file holds COMMITTED DEFAULTS — no real hosts, no secrets. Your real
+# per-environment values live in config/deploy.production.yml, which is
+# GITIGNORED. Create it from the example and deploy with a destination:
+#
+#     cp config/deploy.production.yml.example config/deploy.production.yml
+#     # fill in your host, then:
+#     kamal deploy -d production
+#
 # The bot uses Telegram long polling (bot.py -> app.run_polling), so it has NO
-# inbound HTTP surface. The role therefore runs with `proxy: false` — there's no
-# kamal-proxy in front of it and no HTTP health check; Kamal just keeps the
-# container running and restarts it on deploy. Outbound internet (to Telegram +
-# the LLM endpoint) is all it needs.
+# inbound HTTP surface: the role runs with `proxy: false` (no kamal-proxy, no
+# HTTP health check) — Kamal just keeps the container running. It only needs
+# outbound access to Telegram + the LLM endpoint.
 
 service: subly
 image: zakariaf/subly
 
-# Single role, named `bot` for clarity. Kamal's primary role defaults to `web`,
-# so we point it at `bot` explicitly.
+# Single role, named `bot`. Kamal's primary role defaults to `web`, so point it here.
 primary_role: bot
 
 servers:
   bot:
+    # Placeholder default — the real host is set in config/deploy.production.yml.
+    # Deploying without `-d production` will (intentionally) fail against this.
     hosts:
-      - REPLACE_WITH_HOST_IP
+      - REPLACE_IN_DEPLOY_PRODUCTION_YML
     proxy: false
     cmd: python bot.py
 
-# Kamal logs in as a non-root user provisioned on the host with docker access.
+# Non-root user provisioned on the host with docker access.
 ssh:
   user: deployer
 
 registry:
-  # Docker Hub. KAMAL_REGISTRY_PASSWORD is a Docker Hub access token (read/write),
-  # supplied via .kamal/secrets.
+  # Docker Hub. KAMAL_REGISTRY_PASSWORD is a Docker Hub access token (.kamal/secrets).
   username: zakariaf
   password:
     - KAMAL_REGISTRY_PASSWORD
 
-# Build amd64 so an Apple Silicon dev box cross-compiles (via QEMU) instead of
-# shipping an arm64 image the x86_64 server can't run. Adjust if your host is arm64.
+# Build amd64 so an Apple Silicon dev box cross-compiles instead of shipping an
+# arm64 image an x86_64 host can't run. Change to arm64 if your server is ARM.
 builder:
   arch: amd64
   cache:
@@ -41,25 +48,21 @@ builder:
 env:
   clear:
     PYTHONUNBUFFERED: "1"
-    # Transcription: "local" (faster-whisper on this box, free, no key) or "openai".
+    # Transcription: "local" (faster-whisper on this box, free) or "openai".
     TRANSCRIBE_BACKEND: local
     WHISPER_MODEL: small          # tiny | base | small | medium | large-v3
-    # Translation via any OpenAI-compatible endpoint.
     TRANSLATION_MODEL: gpt-4o-mini
-    # Full list of tunables lives in .env.example / subtrans/config.py — anything
-    # not set here falls back to the in-code defaults.
+    # Other tunables fall back to subtrans/config.py defaults (see .env.example).
   secret:
     - TELEGRAM_BOT_TOKEN
-    # Needed only for LLM translation and/or TRANSCRIBE_BACKEND=openai.
-    - OPENAI_API_KEY
+    - OPENAI_API_KEY              # only for LLM translation / TRANSCRIBE_BACKEND=openai
 
-# Persist the faster-whisper model cache across deploys so the model isn't
-# re-downloaded on every release. Harmless when TRANSCRIBE_BACKEND=openai.
+# Persist the faster-whisper model cache across deploys (local backend only).
 volumes:
   - /opt/subly/whisper-cache:/root/.cache/huggingface
 
-# One container, replaced on deploy. The bot keeps per-chat settings in memory
-# (they reset on restart — see README), so there's nothing to drain.
+# One container, replaced on deploy. Per-chat settings live in memory and reset
+# on restart (see README), so there's nothing to drain.
 boot:
   limit: 1
   wait: 3
