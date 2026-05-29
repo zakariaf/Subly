@@ -53,10 +53,11 @@ Get a Telegram token from [@BotFather](https://t.me/BotFather).
 python bot.py
 ```
 
-Then in Telegram: `/lang Spanish`, send a video, get back the subtitled video
-(and the `.srt`). `/output srt|video|both` picks what's returned; `/bilingual`
-toggles keeping the original text under each translated line. Caption a file with
-a language name to override for that one file.
+Then in Telegram, send a video or audio file. If you haven't set a language yet, the
+bot shows a **language picker** — tap one (English, Persian, Kurdish (Sorani),
+Spanish, German, Arabic) or use `/lang <any other language>`. `/output srt|video|both`
+picks what's returned; `/bilingual` keeps the original under each translated line;
+caption a file with a language name to override it for one file.
 
 ## Run with Docker
 
