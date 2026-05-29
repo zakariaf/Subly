@@ -26,16 +26,20 @@ Invoke this skill before:
    Both share `cfg.request_timeout` / `cfg.max_retries`. Never construct a client
    with default timeouts.
 
-2. **Stay endpoint-portable.** Use `response_format={"type":"json_object"}` *with a
-   try/except fallback to a plain call* (see `translate._translate_batch`), plus a
-   forgiving parser that strips markdown fences and tolerates malformed output.
-   Do **not** "upgrade" to strict Pydantic `.parse()` / `json_schema` — it breaks
-   non-OpenAI endpoints (Together, DeepSeek, local servers) we explicitly support.
+2. **Stay endpoint-portable.** `translate._translate_batch` sends the richest
+   request, then progressively drops the optional params a model/endpoint rejects
+   — `response_format`, then `temperature` — before falling back further; a
+   forgiving parser strips markdown fences and tolerates malformed output. This is
+   what lets OpenAI, DeepSeek, **Gemini** (OpenAI-compatible at
+   `https://generativelanguage.googleapis.com/v1beta/openai/`, still beta — rejects
+   some params), and local servers all work. Do **not** "upgrade" to strict
+   Pydantic `.parse()` / `json_schema` — it breaks the non-OpenAI endpoints we support.
 
 3. **Catch specific exceptions when you act on them** — `RateLimitError`,
    `APITimeoutError`, `APIConnectionError`, `APIStatusError` — not bare `Exception`.
-   The one tolerated broad `except` is the JSON-mode→plain fallback, and it exists
-   only to detect a provider that rejects `response_format`.
+   The tolerated broad `except` is inside the param-dropping fallback ladder, which
+   exists only to detect params a provider/model rejects (`response_format`, `temperature`)
+   and re-raises the real error if even a minimal request fails.
 
 4. **The prompt is a `Final`-style constant, not an f-string.** `SYSTEM_PROMPT`
    lives at module level. The per-request data goes in the user message as JSON,
@@ -50,9 +54,10 @@ Invoke this skill before:
    `translate_segments`, then loop batches of `cfg.translation_batch_size`. Don't
    build a client per batch or per segment.
 
-7. **Translation is `temperature=0.2`-ish and deterministic-leaning.** Keep proper
-   nouns and numbers intact (the prompt says so). Don't crank temperature for
-   "creativity" — these are subtitles.
+7. **Translation leans deterministic (`temperature=0.2`) where supported.** Some
+   models (OpenAI reasoning models, Gemini beta) reject a custom temperature; the
+   fallback ladder drops it so the model uses its default. Keep proper nouns and
+   numbers intact (the prompt says so); don't crank temperature for "creativity".
 
 ## The shape
 
@@ -68,23 +73,29 @@ def _make_client(cfg):
 ```
 
 ```python
-# Portable structured output: try JSON mode, fall back if the provider rejects it.
-try:
-    resp = client.chat.completions.create(
-        model=model, messages=messages, temperature=0.2,
-        response_format={"type": "json_object"},
-    )
-except Exception:
-    resp = client.chat.completions.create(
-        model=model, messages=messages, temperature=0.2,
-    )
+# Portable structured output: try the richest request, drop rejected params, retry.
+variants = [
+    {"response_format": {"type": "json_object"}, "temperature": 0.2},
+    {"response_format": {"type": "json_object"}},
+    {"temperature": 0.2},
+    {},
+]
+resp, last_err = None, None
+for extra in variants:
+    try:
+        resp = client.chat.completions.create(model=model, messages=messages, **extra)
+        break
+    except Exception as e:
+        last_err = e
+if resp is None:
+    raise last_err  # real error (bad key, quota) — surface it
 ```
 
 ## Anti-patterns to flag
 
 - ✗ `OpenAI(api_key=..., base_url=...)` with no `timeout` / `max_retries`.
 - ✗ Switching to `.parse()` / strict `json_schema` without preserving a fallback.
-- ✗ `except Exception:` wrapping a call for any reason *other* than the JSON-mode fallback.
+- ✗ `except Exception:` wrapping a call for any reason *other* than the param-dropping fallback ladder.
 - ✗ Building the prompt with an f-string instead of the `SYSTEM_PROMPT` constant + JSON payload.
 - ✗ A prompt edit that drops the "one id in → one id out, never drop/merge" rule.
 - ✗ Constructing a new client per batch or per segment.

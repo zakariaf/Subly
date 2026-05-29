@@ -90,8 +90,14 @@ quality, `large-v3` is best). Set `TRANSCRIBE_BACKEND=openai` for the OpenAI Whi
 API (`OPENAI_API_KEY`).
 
 **Translation** — any OpenAI-compatible LLM. Point `LLM_BASE_URL`, `LLM_API_KEY`,
-and `TRANSLATION_MODEL` at OpenAI (`https://api.openai.com/v1`, `gpt-4o-mini`),
-DeepSeek (`https://api.deepseek.com`, `deepseek-chat`), a local server, etc.
+and `TRANSLATION_MODEL` at:
+- **OpenAI** — `https://api.openai.com/v1`, e.g. `gpt-4o-mini`
+- **DeepSeek** — `https://api.deepseek.com`, `deepseek-chat`
+- **Gemini** — `https://generativelanguage.googleapis.com/v1beta/openai/`,
+  `gemini-2.5-flash` (free tier ~1,500 requests/day; the Gemini 3.x Flash models
+  are paid preview). Gemini exposes an OpenAI-compatible endpoint, so no extra
+  SDK is needed.
+- a local server (Ollama, vLLM, …), etc.
 
 ## Known limits: Telegram file sizes
 

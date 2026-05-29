@@ -55,6 +55,7 @@ env:
     # Translation LLM — any OpenAI-compatible endpoint:
     #   OpenAI:   https://api.openai.com/v1  + gpt-4o-mini
     #   DeepSeek: https://api.deepseek.com   + deepseek-chat
+    #   Gemini:   https://generativelanguage.googleapis.com/v1beta/openai/  + gemini-2.5-flash
     LLM_BASE_URL: https://api.openai.com/v1
     TRANSLATION_MODEL: gpt-4o-mini
     # Other tunables fall back to subtrans/config.py defaults (see .env.example).
