@@ -51,7 +51,7 @@ env:
     # Transcription runs locally on CPU by default (no GPU). Set to "openai" to
     # offload to the OpenAI Whisper API (then OPENAI_API_KEY is required).
     TRANSCRIBE_BACKEND: local
-    WHISPER_MODEL: medium         # tiny | base | small | medium | large-v3
+    WHISPER_MODEL: small          # tiny | base | small | medium | large-v3
     # Translation LLM — any OpenAI-compatible endpoint:
     #   OpenAI:   https://api.openai.com/v1  + gpt-4o-mini
     #   DeepSeek: https://api.deepseek.com   + deepseek-chat

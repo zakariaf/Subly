@@ -25,7 +25,7 @@ class Config:
     # backend: "local" (faster-whisper, CPU, free) or "openai" (OpenAI Whisper API)
     transcribe_backend: str = "local"
     # local backend (faster-whisper) — CPU by default; no GPU assumed.
-    whisper_model: str = "medium"       # tiny | base | small | medium | large-v3
+    whisper_model: str = "small"        # tiny | base | small | medium | large-v3
     whisper_device: str = "auto"        # auto | cpu | cuda
     whisper_compute_type: str = "int8"  # int8 (cpu) | float16 (gpu) | default
     # openai backend (OpenAI Whisper API) — only used when transcribe_backend == "openai".
@@ -57,7 +57,7 @@ class Config:
             telegram_token=_get("TELEGRAM_BOT_TOKEN"),
             max_file_mb=int(_get("MAX_FILE_MB", "20")),
             transcribe_backend=_get("TRANSCRIBE_BACKEND", "local"),
-            whisper_model=_get("WHISPER_MODEL", "medium"),
+            whisper_model=_get("WHISPER_MODEL", "small"),
             whisper_device=_get("WHISPER_DEVICE", "auto"),
             whisper_compute_type=_get("WHISPER_COMPUTE_TYPE", "int8"),
             openai_api_key=_get("OPENAI_API_KEY"),

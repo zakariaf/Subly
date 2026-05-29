@@ -19,7 +19,7 @@ def test_defaults(monkeypatch):
     _clear_env(monkeypatch)
     cfg = Config.from_env()
     assert cfg.transcribe_backend == "local"
-    assert cfg.whisper_model == "medium"
+    assert cfg.whisper_model == "small"
     assert cfg.max_file_mb == 20
     assert cfg.translation_batch_size == 40
     assert cfg.llm_base_url == "https://api.openai.com/v1"
