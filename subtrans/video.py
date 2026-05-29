@@ -35,6 +35,30 @@ def has_video_stream(path: str) -> bool:
     return "video" in proc.stdout
 
 
+def video_dimensions(path: str) -> tuple[int, int, int]:
+    """Return (width, height, duration_seconds) of the first video stream.
+
+    Passed to Telegram's send_video so the inline (non-fullscreen) preview uses
+    the real aspect ratio instead of a square default. Each value is 0 if it
+    can't be probed — callers should treat 0 as "unknown" and omit it.
+    """
+    proc = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=width,height:format=duration",
+         "-of", "default=noprint_wrappers=1:nokey=1", path],
+        capture_output=True, text=True,
+    )
+    parts = proc.stdout.split()
+
+    def _int(i: int) -> int:
+        try:
+            return int(float(parts[i]))
+        except (IndexError, ValueError):
+            return 0
+
+    return _int(0), _int(1), _int(2)
+
+
 def burn_subtitles(
     video_path: str,
     srt_path: str,

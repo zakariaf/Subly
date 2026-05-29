@@ -35,7 +35,7 @@ from subtrans.audio import extract_audio
 from subtrans.transcribe import transcribe
 from subtrans.translate import translate_segments
 from subtrans.srt import build_srt, is_rtl
-from subtrans.video import has_video_stream, burn_subtitles
+from subtrans.video import has_video_stream, burn_subtitles, video_dimensions
 
 logger = logging.getLogger(__name__)
 
@@ -297,9 +297,13 @@ async def _process_media(context, chat_id, file_id, filename, target, bilingual,
                             chat_id, document=f, filename=os.path.basename(srt_path),
                         )
             else:
+                # Tell Telegram the real dimensions so the inline preview keeps
+                # the video's aspect ratio (otherwise it shows a square preview).
+                w, h, dur = video_dimensions(burned_path)
                 with open(burned_path, "rb") as f:
                     await context.bot.send_video(
                         chat_id, video=f, supports_streaming=True,
+                        width=w or None, height=h or None, duration=dur or None,
                         caption=f"Subtitled · {target}",
                     )
 
@@ -327,6 +331,9 @@ def main() -> None:
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         level=logging.INFO,
     )
+    # httpx logs every request URL at INFO — and Telegram puts the bot token in
+    # the URL path. Quiet it so the token never lands in our logs.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
     if not CFG.telegram_token:
         raise SystemExit("Set TELEGRAM_BOT_TOKEN in your environment / .env file.")
