@@ -1,6 +1,6 @@
 """Tests for SRT assembly — pure logic, no IO."""
 
-from subtrans.srt import format_timestamp, build_srt
+from subtrans.srt import format_timestamp, build_srt, is_rtl
 from subtrans.transcribe import Segment
 
 
@@ -56,3 +56,23 @@ def test_one_block_per_segment():
     srt = build_srt(_segs(), ["a", "b"])
     # Two numbered blocks => indices "1" and "2" each begin a block.
     assert srt.count(" --> ") == 2
+
+
+# --- RTL handling ---------------------------------------------------------- #
+
+def test_is_rtl():
+    assert is_rtl("Persian")
+    assert is_rtl("Kurdish (Sorani)")
+    assert is_rtl("Arabic")
+    assert not is_rtl("Spanish")
+    assert not is_rtl("English")
+
+
+def test_rtl_wraps_each_translated_line_in_embedding_marks():
+    srt = build_srt([Segment(0.0, 1.0, "Hello")], ["سلام"], rtl=True)
+    assert "\u202bسلام\u202c" in srt
+
+
+def test_ltr_has_no_embedding_marks():
+    srt = build_srt([Segment(0.0, 1.0, "Hello")], ["Hola"], rtl=False)
+    assert "\u202b" not in srt and "\u202c" not in srt

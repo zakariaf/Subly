@@ -7,7 +7,7 @@ can run them one at a time in worker threads and report progress between each.
 from .audio import extract_audio
 from .transcribe import transcribe
 from .translate import translate_segments
-from .srt import build_srt
+from .srt import build_srt, is_rtl
 
 
 def run(
@@ -41,4 +41,4 @@ def run(
     )
 
     stage("build")
-    return build_srt(segments, translations, bilingual=bilingual)
+    return build_srt(segments, translations, bilingual=bilingual, rtl=is_rtl(target_language))

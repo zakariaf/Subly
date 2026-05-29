@@ -14,12 +14,14 @@ import subprocess
 
 from .audio import ensure_ffmpeg
 
-# libass style string. Colours are &HAABBGGRR (alpha+BGR), so 00=opaque.
-# White fill, semi-transparent black outline, sitting near the bottom.
+# libass style string. Colours are &HAABBGGRR (alpha+BGR), so AA=00 is opaque.
+# White text on a semi-opaque black box (BorderStyle=3 → the box is filled with
+# OutlineColour; Outline sets its padding) so it stays readable over any scene.
 DEFAULT_STYLE = (
-    "FontName=DejaVu Sans,FontSize=22,"
-    "PrimaryColour=&H00FFFFFF,OutlineColour=&H90000000,"
-    "BorderStyle=1,Outline=2,Shadow=0,MarginV=28"
+    "FontName=DejaVu Sans,FontSize=24,"
+    "PrimaryColour=&H00FFFFFF,"      # text: opaque white
+    "OutlineColour=&H40000000,"      # box: ~75%-opaque black
+    "BorderStyle=3,Outline=5,Shadow=0,MarginV=30"
 )
 
 

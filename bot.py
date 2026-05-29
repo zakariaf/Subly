@@ -34,7 +34,7 @@ from subtrans.config import Config
 from subtrans.audio import extract_audio
 from subtrans.transcribe import transcribe
 from subtrans.translate import translate_segments
-from subtrans.srt import build_srt
+from subtrans.srt import build_srt, is_rtl
 from subtrans.video import has_video_stream, burn_subtitles
 
 logger = logging.getLogger(__name__)
@@ -260,7 +260,7 @@ async def _process_media(context, chat_id, file_id, filename, target, bilingual,
         )
 
         await show("build")
-        srt_text = build_srt(segments, translations, bilingual=bilingual)
+        srt_text = build_srt(segments, translations, bilingual=bilingual, rtl=is_rtl(target))
 
         base = os.path.splitext(filename)[0]
         srt_path = os.path.join(workdir, f"{base}.{target.lower()}.srt")
