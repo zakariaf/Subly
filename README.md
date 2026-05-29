@@ -1,6 +1,6 @@
-# subtrans — subtitle translation bot
+# Subly — subtitle translation bot
 
-A focused subtitle pipeline — **no TTS, no dubbing, no remux**. It takes a video/audio file,
+A focused subtitle pipeline (Python package: `subtrans`) — **no TTS, no dubbing, no remux**. It takes a video/audio file,
 transcribes the speech with timestamps, translates it with an LLM, and produces an
 **SRT** file. Exposed as a **Telegram bot** (and a CLI for testing).
 
@@ -58,6 +58,10 @@ bot shows a **language picker** — tap one (English, Persian, Kurdish (Sorani),
 Spanish, German, Arabic) or use `/lang <any other language>`. `/output srt|video|both`
 picks what's returned; `/bilingual` keeps the original under each translated line;
 caption a file with a language name to override it for one file.
+
+Right-to-left languages (Persian, Arabic, Kurdish Sorani, …) render with the correct
+bidi direction, so embedded Latin words and numbers stay in place — in both the `.srt`
+and the burned-in video.
 
 ## Run with Docker
 
