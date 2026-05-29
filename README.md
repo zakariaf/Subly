@@ -58,6 +58,18 @@ Then in Telegram: `/lang Spanish`, send a video, get back the subtitled video
 toggles keeping the original text under each translated line. Caption a file with
 a language name to override for that one file.
 
+## Run with Docker
+
+No local Python or ffmpeg needed — the image bakes in ffmpeg:
+
+```bash
+cp .env.example .env        # fill in your tokens
+docker compose up --build
+```
+
+The faster-whisper model is cached in a named volume, so it's downloaded once.
+For deploying to a server, see `config/deploy.yml` (Kamal).
+
 ## Run the CLI (no Telegram needed)
 
 ```bash

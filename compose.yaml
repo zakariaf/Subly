@@ -1,0 +1,23 @@
+# Run Subly locally in one command:  docker compose up --build
+#
+# Reuses the same Dockerfile as production (ffmpeg baked in). This just wires up
+# env + a persistent model cache. No `version:` key — it's obsolete in current
+# Compose. The bot uses Telegram long polling, so there are NO published ports.
+
+services:
+  bot:
+    build: .
+    image: subly
+    # The image already defaults to `python bot.py`; no command override needed.
+    env_file:
+      # Copy .env.example -> .env and fill it in. required:false lets the
+      # container also start from variables exported in your shell / passed with -e.
+      - path: .env
+        required: false
+    volumes:
+      # Persist the faster-whisper model so it isn't re-downloaded on every run.
+      - whisper-cache:/root/.cache/huggingface
+    restart: unless-stopped
+
+volumes:
+  whisper-cache:

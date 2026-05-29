@@ -17,5 +17,7 @@ pyproject.toml
 requirements-dev.txt
 Dockerfile
 .dockerignore
+compose.yaml
+compose.*.yaml
 config
 .DS_Store
