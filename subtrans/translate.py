@@ -46,20 +46,27 @@ def _translate_batch(client, model, batch, target_language, source_language) -> 
         {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
     ]
 
-    # Try JSON mode first; fall back to plain if the provider/model rejects it.
-    try:
-        resp = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=0.2,
-            response_format={"type": "json_object"},
-        )
-    except Exception:
-        resp = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=0.2,
-        )
+    # Send the richest request, then progressively drop the optional params that
+    # some providers/models reject — `response_format` (non-OpenAI endpoints) and
+    # a non-default `temperature` (e.g. OpenAI reasoning models accept only the
+    # default). Re-raise only if even the minimal request fails, so real errors
+    # (bad key, quota, network) still surface instead of being silently swallowed.
+    variants = [
+        {"response_format": {"type": "json_object"}, "temperature": 0.2},
+        {"response_format": {"type": "json_object"}},
+        {"temperature": 0.2},
+        {},
+    ]
+    resp = None
+    last_err: Exception | None = None
+    for extra in variants:
+        try:
+            resp = client.chat.completions.create(model=model, messages=messages, **extra)
+            break
+        except Exception as e:
+            last_err = e
+    if resp is None:
+        raise last_err
 
     content = resp.choices[0].message.content or "{}"
     content = content.strip()
