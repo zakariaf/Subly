@@ -1,0 +1,21 @@
+# Keep the build context small and avoid baking in anything we don't run.
+.git
+.gitignore
+.github
+.claude
+.kamal
+tests
+*.md
+.env
+.env.example
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+pyproject.toml
+requirements-dev.txt
+Dockerfile
+.dockerignore
+config
+.DS_Store
