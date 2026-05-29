@@ -4,13 +4,19 @@
 # the ffmpeg/ffprobe CLIs for audio extraction and subtitle burn-in
 # (subtrans/audio.py, subtrans/video.py). libgomp1 is the OpenMP runtime that
 # faster-whisper's ctranslate2/onnxruntime backends need at import time.
+#
+# Fonts: this slim image ships none, so libass would render burned-in subtitles
+# as blank/boxes. fonts-dejavu-core covers Latin (our default FontName); the Noto
+# core set adds Arabic-script (Persian, Arabic, Kurdish Sorani), Hebrew, etc., so
+# libass can fall back to a glyph-complete font for RTL targets.
 
 FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg libgomp1 \
+    && apt-get install -y --no-install-recommends \
+        ffmpeg libgomp1 fontconfig fonts-dejavu-core fonts-noto-core \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
