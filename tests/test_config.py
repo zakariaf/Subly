@@ -5,8 +5,8 @@ from subtrans.config import Config
 _ENV_VARS = [
     "TELEGRAM_BOT_TOKEN", "MAX_FILE_MB", "TRANSCRIBE_BACKEND", "WHISPER_MODEL",
     "WHISPER_DEVICE", "WHISPER_COMPUTE_TYPE", "OPENAI_API_KEY", "OPENAI_BASE_URL",
-    "TRANSLATION_MODEL", "TRANSLATION_BATCH_SIZE", "OPENAI_TIMEOUT",
-    "OPENAI_MAX_RETRIES", "DEFAULT_TARGET_LANGUAGE",
+    "LLM_API_KEY", "LLM_BASE_URL", "TRANSLATION_MODEL", "TRANSLATION_BATCH_SIZE",
+    "REQUEST_TIMEOUT", "MAX_RETRIES", "DEFAULT_TARGET_LANGUAGE",
 ]
 
 
@@ -19,11 +19,12 @@ def test_defaults(monkeypatch):
     _clear_env(monkeypatch)
     cfg = Config.from_env()
     assert cfg.transcribe_backend == "local"
-    assert cfg.whisper_model == "small"
+    assert cfg.whisper_model == "medium"
     assert cfg.max_file_mb == 20
     assert cfg.translation_batch_size == 40
-    assert cfg.openai_timeout == 60.0
-    assert cfg.openai_max_retries == 2
+    assert cfg.llm_base_url == "https://api.openai.com/v1"
+    assert cfg.request_timeout == 60.0
+    assert cfg.max_retries == 2
     assert cfg.default_target_language == "English"
 
 
@@ -31,15 +32,19 @@ def test_overrides_and_type_coercion(monkeypatch):
     _clear_env(monkeypatch)
     monkeypatch.setenv("MAX_FILE_MB", "50")
     monkeypatch.setenv("TRANSLATION_BATCH_SIZE", "10")
-    monkeypatch.setenv("OPENAI_TIMEOUT", "30.5")
-    monkeypatch.setenv("OPENAI_MAX_RETRIES", "5")
+    monkeypatch.setenv("REQUEST_TIMEOUT", "30.5")
+    monkeypatch.setenv("MAX_RETRIES", "5")
     monkeypatch.setenv("TRANSCRIBE_BACKEND", "openai")
+    monkeypatch.setenv("LLM_BASE_URL", "https://api.deepseek.com")
+    monkeypatch.setenv("TRANSLATION_MODEL", "deepseek-chat")
     cfg = Config.from_env()
     assert cfg.max_file_mb == 50
     assert cfg.translation_batch_size == 10
-    assert cfg.openai_timeout == 30.5
-    assert cfg.openai_max_retries == 5
+    assert cfg.request_timeout == 30.5
+    assert cfg.max_retries == 5
     assert cfg.transcribe_backend == "openai"
+    assert cfg.llm_base_url == "https://api.deepseek.com"
+    assert cfg.translation_model == "deepseek-chat"
 
 
 def test_values_are_stripped(monkeypatch):

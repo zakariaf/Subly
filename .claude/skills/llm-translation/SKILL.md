@@ -20,9 +20,11 @@ Invoke this skill before:
 
 1. **Build clients from `Config`, with explicit `timeout` and `max_retries`.** The
    SDK's default timeout is **10 minutes** — unacceptable for a request a user is
-   waiting on. Use `cfg.openai_timeout` / `cfg.openai_max_retries`
-   (`translate._make_client`, `transcribe._transcribe_openai`). Never construct a
-   client with default timeouts.
+   waiting on. The translation client uses `cfg.llm_api_key` / `cfg.llm_base_url`
+   (`translate._make_client`); transcription's OpenAI Whisper client uses the
+   *separate* `cfg.openai_api_key` / `cfg.openai_base_url` (`transcribe._transcribe_openai`).
+   Both share `cfg.request_timeout` / `cfg.max_retries`. Never construct a client
+   with default timeouts.
 
 2. **Stay endpoint-portable.** Use `response_format={"type":"json_object"}` *with a
    try/except fallback to a plain call* (see `translate._translate_batch`), plus a
@@ -58,10 +60,10 @@ Invoke this skill before:
 def _make_client(cfg):
     from openai import OpenAI
     return OpenAI(
-        api_key=cfg.openai_api_key,
-        base_url=cfg.openai_base_url,
-        timeout=cfg.openai_timeout,       # explicit — never the 10-min default
-        max_retries=cfg.openai_max_retries,
+        api_key=cfg.llm_api_key,          # translation provider (OpenAI, DeepSeek, ...)
+        base_url=cfg.llm_base_url,
+        timeout=cfg.request_timeout,      # explicit — never the 10-min default
+        max_retries=cfg.max_retries,
     )
 ```
 

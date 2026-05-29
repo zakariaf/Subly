@@ -28,10 +28,10 @@ def _make_client(cfg):
     from openai import OpenAI
 
     return OpenAI(
-        api_key=cfg.openai_api_key,
-        base_url=cfg.openai_base_url,
-        timeout=cfg.openai_timeout,
-        max_retries=cfg.openai_max_retries,
+        api_key=cfg.llm_api_key,
+        base_url=cfg.llm_base_url,
+        timeout=cfg.request_timeout,
+        max_retries=cfg.max_retries,
     )
 
 

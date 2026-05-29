@@ -87,8 +87,8 @@ def transcribe(audio_path, cfg, language=None):
 # Many settings -> one object, instead of a 10-parameter function.
 @dataclass
 class Config:
-    whisper_model: str = "small"
-    openai_timeout: float = 60.0
+    whisper_model: str = "medium"
+    request_timeout: float = 60.0
     ...   # the parameter budget problem, solved by bundling
 ```
 

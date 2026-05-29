@@ -91,7 +91,11 @@ be tested without Telegram.
 - **Always set `timeout` and `max_retries`** on the client — the SDK default
   timeout is *10 minutes*, which would hang a user's request. We construct clients
   from `Config` (`translate._make_client`, `transcribe._transcribe_openai`) so the
-  values come from `OPENAI_TIMEOUT` / `OPENAI_MAX_RETRIES`.
+  values come from `REQUEST_TIMEOUT` / `MAX_RETRIES`.
+- **Translation and transcription use separate credentials.** The LLM client reads
+  `LLM_API_KEY` / `LLM_BASE_URL`; the OpenAI Whisper client reads `OPENAI_API_KEY` /
+  `OPENAI_BASE_URL`. This lets you translate with DeepSeek while transcribing
+  locally or with OpenAI Whisper.
 - **Catch specific exceptions** when you act on them (`RateLimitError`,
   `APITimeoutError`, `APIConnectionError`, `APIStatusError`) rather than bare
   `Exception`.

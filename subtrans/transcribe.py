@@ -99,8 +99,8 @@ def transcribe(audio_path: str, cfg, language: str | None = None) -> tuple[list[
             api_key=cfg.openai_api_key,
             base_url=cfg.openai_base_url,
             language=language,
-            timeout=cfg.openai_timeout,
-            max_retries=cfg.openai_max_retries,
+            timeout=cfg.request_timeout,
+            max_retries=cfg.max_retries,
         )
     return _transcribe_local(
         audio_path,

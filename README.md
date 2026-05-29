@@ -42,7 +42,7 @@ Requires **Python 3.10+** and **ffmpeg** on PATH.
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env        # then fill in TELEGRAM_BOT_TOKEN and OPENAI_API_KEY
+cp .env.example .env        # then fill in TELEGRAM_BOT_TOKEN and LLM_API_KEY
 ```
 
 Get a Telegram token from [@BotFather](https://t.me/BotFather).
@@ -80,12 +80,17 @@ python cli.py talk.mp4 -l Spanish --burn      # also writes talk.subbed.mp4
 
 ## Swapping backends — all via `.env`, no code changes
 
-**Transcription** — `TRANSCRIBE_BACKEND=local` runs faster-whisper on your machine
-(free, no key; `WHISPER_MODEL=small` is a good speed/quality default, `large-v3` is
-best). Set `TRANSCRIBE_BACKEND=openai` to use the Whisper API instead.
+Transcription and translation are configured **independently**, so they can use
+different providers — e.g. local Whisper for transcription + DeepSeek for translation.
 
-**Translation** — any OpenAI-compatible endpoint. Point `OPENAI_BASE_URL` and
-`TRANSLATION_MODEL` at OpenAI, Together, DeepSeek, a local server, etc.
+**Transcription** — `TRANSCRIBE_BACKEND=local` runs faster-whisper on your machine
+(CPU, free, no key; `WHISPER_MODEL=medium` is the default speed/quality balance,
+`small` is lighter, `large-v3` is best). Set `TRANSCRIBE_BACKEND=openai` for the
+OpenAI Whisper API (`OPENAI_API_KEY`).
+
+**Translation** — any OpenAI-compatible LLM. Point `LLM_BASE_URL`, `LLM_API_KEY`,
+and `TRANSLATION_MODEL` at OpenAI (`https://api.openai.com/v1`, `gpt-4o-mini`),
+DeepSeek (`https://api.deepseek.com`, `deepseek-chat`), a local server, etc.
 
 ## Known limits: Telegram file sizes
 

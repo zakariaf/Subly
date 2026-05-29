@@ -49,22 +49,22 @@ Invoke this skill before:
 # config.py — field, parse, default. All three in one place.
 @dataclass
 class Config:
-    openai_timeout: float = 60.0          # 1. typed field + default
-    openai_max_retries: int = 2
+    request_timeout: float = 60.0         # 1. typed field + default
+    max_retries: int = 2
 
     @classmethod
     def from_env(cls) -> "Config":
         return cls(
-            openai_timeout=float(_get("OPENAI_TIMEOUT", "60")),    # 2. parse + coerce
-            openai_max_retries=int(_get("OPENAI_MAX_RETRIES", "2")),
+            request_timeout=float(_get("REQUEST_TIMEOUT", "60")),  # 2. parse + coerce
+            max_retries=int(_get("MAX_RETRIES", "2")),
         )
 ```
 
 ```dotenv
 # .env.example — 3. documented, blank for secrets only
 # Per-request timeout (seconds) and automatic retries for transient errors.
-OPENAI_TIMEOUT=60
-OPENAI_MAX_RETRIES=2
+REQUEST_TIMEOUT=60
+MAX_RETRIES=2
 ```
 
 ## Anti-patterns to flag

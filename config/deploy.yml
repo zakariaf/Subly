@@ -48,14 +48,20 @@ builder:
 env:
   clear:
     PYTHONUNBUFFERED: "1"
-    # Transcription: "local" (faster-whisper on this box, free) or "openai".
+    # Transcription runs locally on CPU by default (no GPU). Set to "openai" to
+    # offload to the OpenAI Whisper API (then OPENAI_API_KEY is required).
     TRANSCRIBE_BACKEND: local
-    WHISPER_MODEL: small          # tiny | base | small | medium | large-v3
+    WHISPER_MODEL: medium         # tiny | base | small | medium | large-v3
+    # Translation LLM — any OpenAI-compatible endpoint:
+    #   OpenAI:   https://api.openai.com/v1  + gpt-4o-mini
+    #   DeepSeek: https://api.deepseek.com   + deepseek-chat
+    LLM_BASE_URL: https://api.openai.com/v1
     TRANSLATION_MODEL: gpt-4o-mini
     # Other tunables fall back to subtrans/config.py defaults (see .env.example).
   secret:
     - TELEGRAM_BOT_TOKEN
-    - OPENAI_API_KEY              # only for LLM translation / TRANSCRIBE_BACKEND=openai
+    - LLM_API_KEY                 # translation provider key (OpenAI, DeepSeek, ...)
+    # - OPENAI_API_KEY            # also required if TRANSCRIBE_BACKEND=openai
 
 # Persist the faster-whisper model cache across deploys (local backend only).
 volumes:

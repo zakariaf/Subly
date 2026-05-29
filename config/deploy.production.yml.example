@@ -19,5 +19,8 @@ servers:
 #
 # env:
 #   clear:
-#     TRANSCRIBE_BACKEND: openai   # offload transcription instead of local Whisper
-#     WHISPER_MODEL: large-v3
+#     LLM_BASE_URL: https://api.deepseek.com   # translate with DeepSeek instead of OpenAI
+#     TRANSLATION_MODEL: deepseek-chat
+#     TRANSCRIBE_BACKEND: openai               # offload transcription to OpenAI Whisper
+#
+# (LLM_API_KEY / OPENAI_API_KEY are secrets — set them in .kamal/secrets, not here.)
