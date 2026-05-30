@@ -46,12 +46,13 @@ def main() -> int:
 
     if args.burn:
         from subtrans.video import burn_subtitles, has_video_stream
+        from subtrans.srt import is_rtl
         if not has_video_stream(args.input):
             print("⚠️  Input has no video track — skipping burn.", file=sys.stderr)
         else:
             print("🔥 Burning subtitles into video…", file=sys.stderr)
             burned = f"{args.input.rsplit('.', 1)[0]}.subbed.mp4"
-            burn_subtitles(args.input, out, burned)
+            burn_subtitles(args.input, out, burned, is_rtl(args.language))
             print(f"✅ Wrote {burned}", file=sys.stderr)
     return 0
 

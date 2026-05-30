@@ -17,12 +17,19 @@ from .audio import ensure_ffmpeg
 # libass style string. Colours are &HAABBGGRR (alpha+BGR), so AA=00 is opaque.
 # White text on a semi-opaque black box (BorderStyle=3 → the box is filled with
 # OutlineColour; Outline sets its padding) so it stays readable over any scene.
-DEFAULT_STYLE = (
-    "FontName=DejaVu Sans,FontSize=16,"
-    "PrimaryColour=&H00FFFFFF,"      # text: opaque white
-    "OutlineColour=&H40000000,"      # box: ~75%-opaque black
-    "BorderStyle=3,Outline=3,Shadow=0,MarginV=30"
-)
+#
+# Font is picked per script: DejaVu Sans has Arabic codepoints but renders them
+# UNSHAPED, so for right-to-left targets we use Noto Sans Arabic (shipped by
+# fonts-noto-core in the image), which shapes Persian/Arabic correctly and still
+# covers the embedded Latin. FontSize is ~5% of the video height, so it scales.
+def _style(font_size: int = 16, rtl: bool = False) -> str:
+    font = "Noto Sans Arabic" if rtl else "DejaVu Sans"
+    return (
+        f"FontName={font},FontSize={font_size},"
+        "PrimaryColour=&H00FFFFFF,"      # text: opaque white
+        "OutlineColour=&H40000000,"      # box: ~75%-opaque black
+        "BorderStyle=3,Outline=3,Shadow=0,MarginV=30"
+    )
 
 
 def has_video_stream(path: str) -> bool:
@@ -63,7 +70,8 @@ def burn_subtitles(
     video_path: str,
     srt_path: str,
     out_path: str,
-    style: str = DEFAULT_STYLE,
+    rtl: bool = False,
+    font_size: int = 16,
     crf: int = 23,
     preset: str = "veryfast",
 ) -> str:
@@ -77,9 +85,8 @@ def burn_subtitles(
     srt_dir = os.path.dirname(os.path.abspath(srt_path)) or "."
     srt_name = os.path.basename(srt_path)
 
-    vf = f"subtitles={srt_name}"
-    if style:
-        vf += f":force_style='{style}'"
+    style = _style(font_size, rtl)
+    vf = f"subtitles={srt_name}:force_style='{style}'"
 
     cmd = [
         "ffmpeg",

@@ -283,7 +283,7 @@ async def _process_media(context, chat_id, file_id, filename, target, bilingual,
         if mode in ("video", "both") and is_video:
             await show("burn")
             burned_path = os.path.join(workdir, f"{base}.{target.lower()}.subbed.mp4")
-            await asyncio.to_thread(burn_subtitles, media_path, srt_path, burned_path)
+            await asyncio.to_thread(burn_subtitles, media_path, srt_path, burned_path, is_rtl(target))
 
             burned_mb = os.path.getsize(burned_path) / (1024 * 1024)
             if burned_mb > CFG.send_limit_mb:
