@@ -51,21 +51,21 @@ env:
     # Transcription runs locally on CPU by default (no GPU). Set to "openai" to
     # offload to the OpenAI Whisper API (then OPENAI_API_KEY is required).
     TRANSCRIBE_BACKEND: local
-    WHISPER_MODEL: small          # tiny | base | small | medium | large-v3
+    WHISPER_MODEL: medium          # tiny | base | small | medium | large-v3
     # Translation LLM — any OpenAI-compatible endpoint:
     #   OpenAI:   https://api.openai.com/v1  + gpt-4o-mini
     #   DeepSeek: https://api.deepseek.com   + deepseek-chat
     #   Gemini:   https://generativelanguage.googleapis.com/v1beta/openai/  + gemini-2.5-flash
-    LLM_BASE_URL: https://api.openai.com/v1
-    TRANSLATION_MODEL: gpt-4o-mini
+    LLM_BASE_URL: https://generativelanguage.googleapis.com/v1beta/openai/
+    TRANSLATION_MODEL: gemini-3.5-flash
     # Other tunables fall back to subtrans/config.py defaults (see .env.example).
     #
     # Big files: route through the local Bot API server accessory below (lifts the
     # 20/50 MB caps). Remove these four lines + the accessory to use the cloud API.
     TELEGRAM_API_BASE: http://subly-telegram-bot-api:8081
     TELEGRAM_LOCAL_MODE: "1"
-    MAX_FILE_MB: "2000"
-    SEND_LIMIT_MB: "2000"
+    MAX_FILE_MB: "100"
+    SEND_LIMIT_MB: "100"
   secret:
     - TELEGRAM_BOT_TOKEN
     - LLM_API_KEY                 # translation provider key (OpenAI, DeepSeek, ...)
