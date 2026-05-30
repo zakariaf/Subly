@@ -103,14 +103,24 @@ and `TRANSLATION_MODEL` at:
   SDK is needed.
 - a local server (Ollama, vLLM, …), etc.
 
-## Known limits: Telegram file sizes
+## Larger files: the local Bot API server
 
-Bots can **download** files up to **20 MB** (`getFile`) and **send** files up to
-**50 MB**. So a long video, or a re-encoded video that grows past 50 MB, can fail to
-come back — in that case the bot falls back to sending just the `.srt`. For larger
-media, run a [local Bot API server](https://github.com/tdlib/telegram-bot-api) and
-raise `MAX_FILE_MB`. Burning is also the slow step on CPU; use `/output srt` if you
-only need the file.
+Telegram's **cloud** Bot API caps bot **downloads at 20 MB** and **sends at 50 MB**, so
+a long or re-encoded video can fail to come back (the bot then sends just the `.srt`).
+To lift those caps — **downloads unlimited, uploads up to 2 GB** — run a
+[local Bot API server](https://github.com/tdlib/telegram-bot-api) alongside the bot.
+It's wired up both ways:
+
+- **Docker Compose:** `docker compose --profile local-api up --build`
+- **Kamal:** the `telegram-bot-api` accessory in `config/deploy.yml`
+
+Both need an **`api_id` + `api_hash`** from [my.telegram.org](https://my.telegram.org)
+(`TELEGRAM_API_ID` / `TELEGRAM_API_HASH`). You then point the bot at the server with
+`TELEGRAM_API_BASE` + `TELEGRAM_LOCAL_MODE=1` and raise `MAX_FILE_MB` / `SEND_LIMIT_MB`
+(see `.env.example`). The bot and the server share a data volume so the bot reads the
+files directly off disk.
+
+Burning is also the slow step on CPU; use `/output srt` if you only need the file.
 
 ## Layout
 
