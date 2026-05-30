@@ -174,10 +174,13 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         )
         return
 
-    # Language: a caption wins, else the chat's saved language, else ask the user.
+    # Language: a caption you add wins, else the chat's saved language, else ask.
+    # A forwarded message carries the *original's* caption (not a language you chose),
+    # so ignore captions on forwards — otherwise an unrelated caption like "watch this"
+    # would be treated as the target language.
     caption = (update.message.caption or "").strip()
     chat_lang = _chat_language(context)
-    if caption:
+    if caption and update.message.forward_origin is None:
         target = caption.title()
     elif chat_lang:
         target = chat_lang
