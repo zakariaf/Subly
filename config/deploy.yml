@@ -59,6 +59,7 @@ env:
     #   Gemini:   https://generativelanguage.googleapis.com/v1beta/openai/  + gemini-2.5-flash
     LLM_BASE_URL: https://generativelanguage.googleapis.com/v1beta/openai/
     TRANSLATION_MODEL: gemini-3.5-flash
+    TRANSLATION_BATCH_SIZE: "500"  # segments per LLM request;
     # Other tunables fall back to subtrans/config.py defaults (see .env.example).
     #
     # Big files: route through the local Bot API server accessory below (lifts the
