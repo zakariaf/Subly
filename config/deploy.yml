@@ -32,6 +32,13 @@ servers:
 ssh:
   user: deployer
 
+# Convenience aliases: `kamal <alias> -d production`. shell -> a bash shell in the
+# running container; console -> a Python REPL; logs -> tail the bot's logs.
+aliases:
+  shell: app exec --interactive --reuse "bash"
+  console: app exec --interactive --reuse "python"
+  logs: app logs -f
+
 registry:
   # Docker Hub. KAMAL_REGISTRY_PASSWORD is a Docker Hub access token (.kamal/secrets).
   username: zakariaf
