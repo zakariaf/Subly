@@ -1,6 +1,6 @@
 """Tests for the pure logic in video.py (the ffmpeg calls are not unit-tested)."""
 
-from subtrans.video import _font_size, _style
+from subtrans.video import _font_size, _subtitle_font
 
 
 def test_portrait_and_square_use_the_base_size():
@@ -24,9 +24,14 @@ def test_unknown_dimensions_fall_back_to_base():
     assert _font_size(0, 0) == 16
 
 
-def test_rtl_uses_a_font_that_shapes_kurdish():
-    assert "Scheherazade New" in _style(40, rtl=True)
+def test_kurdish_uses_the_bundled_kurdish_font():
+    assert _subtitle_font("Kurdish (Sorani)") == "IRANBlack"
 
 
-def test_ltr_uses_latin_font():
-    assert "DejaVu Sans" in _style(40, rtl=False)
+def test_persian_and_arabic_use_noto_arabic():
+    assert _subtitle_font("Persian") == "Noto Sans Arabic"
+    assert _subtitle_font("Arabic") == "Noto Sans Arabic"
+
+
+def test_latin_targets_use_dejavu():
+    assert _subtitle_font("English") == "DejaVu Sans"

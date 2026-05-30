@@ -13,20 +13,27 @@ import os
 import subprocess
 
 from .audio import ensure_ffmpeg
+from .srt import is_rtl
+
+# Subtitle font per target language. DejaVu Sans (our Latin default) renders Arabic
+# codepoints UNSHAPED, and Noto's Arabic faces fake Kurdish (Sorani) letters with
+# detachable marks that come out disconnected — so Kurdish uses IRANBlack, which has
+# genuine joined Kurdish glyphs and is vendored into the image (see Dockerfile).
+# Persian/Arabic keep Noto Sans Arabic (fonts-noto-core); everything else is Latin.
+def _subtitle_font(language: str) -> str:
+    if "sorani" in language.lower():
+        return "IRANBlack"
+    if is_rtl(language):
+        return "Noto Sans Arabic"
+    return "DejaVu Sans"
+
 
 # libass style string. Colours are &HAABBGGRR (alpha+BGR), so AA=00 is opaque.
 # White text on a semi-opaque black box (BorderStyle=3 → the box is filled with
 # OutlineColour; Outline sets its padding) so it stays readable over any scene.
-#
-# Font is picked per script: DejaVu Sans (Latin default) renders Arabic codepoints
-# UNSHAPED, and the Noto Arabic faces fake Kurdish (Sorani) letters with detachable
-# marks that come out disconnected. So for right-to-left targets we use Scheherazade
-# New — a traditional Arabic Naskh face (the style iOS uses) with genuine, joined
-# Kurdish glyphs — vendored into the image (see Dockerfile). FontSize is chosen by
-# _font_size from the video's aspect. Outline is the box padding — 1 so two-line
-# boxes don't overlap.
-def _style(font_size: int, rtl: bool = False) -> str:
-    font = "Scheherazade New" if rtl else "DejaVu Sans"
+# FontSize comes from _font_size (the video's aspect), the font from _subtitle_font
+# (the target language). Outline is the box padding — 1 so two-line boxes don't overlap.
+def _style(font_size: int, font: str) -> str:
     return (
         f"FontName={font},FontSize={font_size},"
         "PrimaryColour=&H00FFFFFF,"      # text: opaque white
@@ -87,7 +94,7 @@ def burn_subtitles(
     video_path: str,
     srt_path: str,
     out_path: str,
-    rtl: bool = False,
+    language: str = "",
     crf: int = 23,
     preset: str = "veryfast",
 ) -> str:
@@ -103,7 +110,7 @@ def burn_subtitles(
 
     w, h, _ = video_dimensions(os.path.abspath(video_path))
     font_size = _font_size(w, h)
-    vf = f"subtitles={srt_name}:force_style='{_style(font_size, rtl)}'"
+    vf = f"subtitles={srt_name}:force_style='{_style(font_size, _subtitle_font(language))}'"
 
     cmd = [
         "ffmpeg",
