@@ -10,36 +10,57 @@ Two ways to "attach":
 """
 
 import os
+import re
 import subprocess
 
 from .audio import ensure_ffmpeg
 from .srt import is_rtl
 
-# Subtitle font per target language. DejaVu Sans (our Latin default) renders Arabic
-# codepoints UNSHAPED, and Noto's Arabic faces fake Kurdish (Sorani) letters with
-# detachable marks that come out disconnected — so Kurdish uses IRANBlack, which has
-# genuine joined Kurdish glyphs and is vendored into the image (see Dockerfile).
-# Persian/Arabic keep Noto Sans Arabic (fonts-noto-core); everything else is Latin.
-def _subtitle_font(language: str) -> str:
-    if "sorani" in language.lower():
-        return "IRANBlack"
-    if is_rtl(language):
-        return "Noto Sans Arabic"
-    return "DejaVu Sans"
+# We burn with ffmpeg's `ass` filter and shaping=complex — NOT the `subtitles`
+# filter, which only does *simple* shaping. Simple shaping joins Arabic letters via
+# precomposed presentation forms, but Kurdish (Sorani) letters like ێ ڵ ۆ have none,
+# so they render disconnected; complex (HarfBuzz) shaping joins them. The `ass`
+# filter needs an ASS file, so burn_subtitles wraps the SRT cues in one with the
+# style baked in: white text on a semi-opaque black box (BorderStyle=3 fills it with
+# OutlineColour, Outline=1 is its padding, Alignment=2 is bottom-centre; colours are
+# &HAABBGGRR, AA=00 opaque). PlayResY is 288 — what the `subtitles` filter assumed
+# for SRT — so _font_size still maps to the same on-screen size.
+_ASS_HEADER = """\
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 384
+PlayResY: 288
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,{font},{font_size},&H00FFFFFF,&H000000FF,&H40000000,&H00000000,0,0,0,0,100,100,0,0,3,1,0,2,10,10,28,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
 
 
-# libass style string. Colours are &HAABBGGRR (alpha+BGR), so AA=00 is opaque.
-# White text on a semi-opaque black box (BorderStyle=3 → the box is filled with
-# OutlineColour; Outline sets its padding) so it stays readable over any scene.
-# FontSize comes from _font_size (the video's aspect), the font from _subtitle_font
-# (the target language). Outline is the box padding — 1 so two-line boxes don't overlap.
-def _style(font_size: int, font: str) -> str:
-    return (
-        f"FontName={font},FontSize={font_size},"
-        "PrimaryColour=&H00FFFFFF,"      # text: opaque white
-        "OutlineColour=&H40000000,"      # box: ~75%-opaque black
-        "BorderStyle=3,Outline=1,Shadow=0,MarginV=28"
-    )
+def _ass_timestamp(srt_timestamp: str) -> str:
+    """SRT 'HH:MM:SS,mmm' -> ASS 'H:MM:SS.cc' (centiseconds)."""
+    hours, minutes, rest = srt_timestamp.strip().split(":")
+    seconds, millis = rest.split(",")
+    return f"{int(hours)}:{minutes}:{seconds}.{int(millis) // 10:02d}"
+
+
+def _ass_document(srt_text: str, font: str, font_size: int) -> str:
+    """Wrap SRT cues in a styled ASS document so the burn can shape complex scripts."""
+    parts = [_ASS_HEADER.format(font=font, font_size=font_size)]
+    for block in re.split(r"\n[ \t]*\n", srt_text.strip()):
+        rows = block.splitlines()
+        timing = next((r for r in rows if "-->" in r), None)
+        if timing is None:
+            continue
+        start, end = timing.split("-->")
+        text = "\\N".join(rows[rows.index(timing) + 1:])
+        parts.append(
+            f"Dialogue: 0,{_ass_timestamp(start)},{_ass_timestamp(end)},Default,,0,0,0,,{text}\n"
+        )
+    return "".join(parts)
 
 
 def has_video_stream(path: str) -> bool:
@@ -100,22 +121,27 @@ def burn_subtitles(
 ) -> str:
     """Burn subtitles into the video frames (re-encodes video, copies audio).
 
-    We run ffmpeg with cwd set to the SRT's directory and reference it by
-    basename — the `subtitles` filter has fragile path escaping (colons, commas,
-    quotes), and a bare filename sidesteps all of it.
+    Renders with the `ass` filter and complex (HarfBuzz) shaping so Arabic-script
+    text — including Kurdish (Sorani) — joins correctly; the `subtitles` filter only
+    does simple shaping, which breaks those joins. We write the styled ASS next to
+    the SRT and run ffmpeg from that directory, referencing it by basename — libass
+    filter paths have fragile escaping a bare filename avoids.
     """
     ensure_ffmpeg()
-    srt_dir = os.path.dirname(os.path.abspath(srt_path)) or "."
-    srt_name = os.path.basename(srt_path)
+    work_dir = os.path.dirname(os.path.abspath(srt_path)) or "."
+    ass_name = os.path.splitext(os.path.basename(srt_path))[0] + ".ass"
 
+    with open(srt_path, encoding="utf-8") as f:
+        srt_text = f.read()
     w, h, _ = video_dimensions(os.path.abspath(video_path))
-    font_size = _font_size(w, h)
-    vf = f"subtitles={srt_name}:force_style='{_style(font_size, _subtitle_font(language))}'"
+    font = "Noto Sans Arabic" if is_rtl(language) else "DejaVu Sans"
+    with open(os.path.join(work_dir, ass_name), "w", encoding="utf-8") as f:
+        f.write(_ass_document(srt_text, font, _font_size(w, h)))
 
     cmd = [
         "ffmpeg",
         "-i", os.path.abspath(video_path),
-        "-vf", vf,
+        "-vf", f"ass={ass_name}:shaping=complex",
         "-c:v", "libx264", "-preset", preset, "-crf", str(crf),
         "-pix_fmt", "yuv420p",            # broad player compatibility
         "-c:a", "copy",                   # keep original audio untouched
@@ -123,7 +149,7 @@ def burn_subtitles(
         "-y", "-loglevel", "error",
         os.path.abspath(out_path),
     ]
-    proc = subprocess.run(cmd, cwd=srt_dir, capture_output=True, text=True)
+    proc = subprocess.run(cmd, cwd=work_dir, capture_output=True, text=True)
     if proc.returncode != 0:
         raise RuntimeError(f"ffmpeg burn-in failed:\n{proc.stderr.strip()}")
     return out_path
