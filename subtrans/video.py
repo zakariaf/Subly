@@ -18,10 +18,10 @@ from .audio import ensure_ffmpeg
 # White text on a semi-opaque black box (BorderStyle=3 → the box is filled with
 # OutlineColour; Outline sets its padding) so it stays readable over any scene.
 DEFAULT_STYLE = (
-    "FontName=DejaVu Sans,FontSize=24,"
+    "FontName=DejaVu Sans,FontSize=16,"
     "PrimaryColour=&H00FFFFFF,"      # text: opaque white
     "OutlineColour=&H40000000,"      # box: ~75%-opaque black
-    "BorderStyle=3,Outline=5,Shadow=0,MarginV=30"
+    "BorderStyle=3,Outline=3,Shadow=0,MarginV=30"
 )
 
 
