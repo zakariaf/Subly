@@ -58,7 +58,7 @@ env:
     #   DeepSeek: https://api.deepseek.com   + deepseek-chat
     #   Gemini:   https://generativelanguage.googleapis.com/v1beta/openai/  + gemini-2.5-flash
     LLM_BASE_URL: https://api.deepseek.com
-    TRANSLATION_MODEL: deepseek-v4-flash
+    TRANSLATION_MODEL: deepseek-v4-pro
     TRANSLATION_BATCH_SIZE: "500"  # segments per LLM request;
     # Other tunables fall back to subtrans/config.py defaults (see .env.example).
     #
