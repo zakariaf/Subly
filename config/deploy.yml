@@ -40,10 +40,11 @@ registry:
 
 # Build amd64 so an Apple Silicon dev box cross-compiles instead of shipping an
 # arm64 image an x86_64 host can't run. Change to arm64 if your server is ARM.
+# No registry build cache: Docker Hub rejects the cache blob upload (400). The local
+# buildx builder still caches layers between rebuilds, so this only drops cross-machine
+# cache sharing. (Switch to `remote: ssh://deployer@HOST` to build on the server.)
 builder:
   arch: amd64
-  cache:
-    type: registry
 
 env:
   clear:
