@@ -21,14 +21,15 @@ from .audio import ensure_ffmpeg
 # Font is picked per script: DejaVu Sans has Arabic codepoints but renders them
 # UNSHAPED, so for right-to-left targets we use Noto Sans Arabic (shipped by
 # fonts-noto-core in the image), which shapes Persian/Arabic correctly and still
-# covers the embedded Latin. FontSize is ~5% of the video height, so it scales.
-def _style(font_size: int = 16, rtl: bool = False) -> str:
+# covers the embedded Latin. FontSize is chosen by burn_subtitles from the video's
+# aspect. Outline is the box padding — kept to 1 so two-line boxes don't overlap.
+def _style(font_size: int, rtl: bool = False) -> str:
     font = "Noto Sans Arabic" if rtl else "DejaVu Sans"
     return (
         f"FontName={font},FontSize={font_size},"
         "PrimaryColour=&H00FFFFFF,"      # text: opaque white
         "OutlineColour=&H40000000,"      # box: ~75%-opaque black
-        "BorderStyle=3,Outline=3,Shadow=0,MarginV=30"
+        "BorderStyle=3,Outline=1,Shadow=0,MarginV=28"
     )
 
 
@@ -71,7 +72,6 @@ def burn_subtitles(
     srt_path: str,
     out_path: str,
     rtl: bool = False,
-    font_size: int = 16,
     crf: int = 23,
     preset: str = "veryfast",
 ) -> str:
@@ -85,8 +85,12 @@ def burn_subtitles(
     srt_dir = os.path.dirname(os.path.abspath(srt_path)) or "."
     srt_name = os.path.basename(srt_path)
 
-    style = _style(font_size, rtl)
-    vf = f"subtitles={srt_name}:force_style='{style}'"
+    # libass scales the font to the video HEIGHT, so a fixed size looks small on
+    # wide (16:9) videos and fine on tall/square ones. Scale up for landscape so
+    # the text stays a readable size whatever the aspect ratio.
+    w, h, _ = video_dimensions(os.path.abspath(video_path))
+    font_size = round(16 * max(1.0, (w / h) if (w and h) else 1.0))
+    vf = f"subtitles={srt_name}:force_style='{_style(font_size, rtl)}'"
 
     cmd = [
         "ffmpeg",
