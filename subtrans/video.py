@@ -21,7 +21,7 @@ from .audio import ensure_ffmpeg
 # Font is picked per script: DejaVu Sans has Arabic codepoints but renders them
 # UNSHAPED, so for right-to-left targets we use Noto Sans Arabic (shipped by
 # fonts-noto-core in the image), which shapes Persian/Arabic correctly and still
-# covers the embedded Latin. FontSize is chosen by burn_subtitles from the video's
+# covers the embedded Latin. FontSize is chosen by _font_size from the video's
 # aspect. Outline is the box padding — kept to 1 so two-line boxes don't overlap.
 def _style(font_size: int, rtl: bool = False) -> str:
     font = "Noto Sans Arabic" if rtl else "DejaVu Sans"
@@ -67,6 +67,20 @@ def video_dimensions(path: str) -> tuple[int, int, int]:
     return _int(0), _int(1), _int(2)
 
 
+def _font_size(width: int, height: int) -> int:
+    """Pick a libass FontSize that reads consistently across aspect ratios.
+
+    libass scales FontSize to the video HEIGHT, so a height-proportional size
+    looks right on tall/square clips but tiny on wide (16:9) ones — a landscape
+    video is displayed in a short strip. Portrait/square stay at the base size;
+    landscape scales up with the squared aspect ratio (empirically ~2x at 16:9),
+    capped so an ultra-wide clip doesn't blow the text up. Unknown dimensions
+    (0) fall back to the base size.
+    """
+    ratio = (width / height) if (width and height) else 1.0
+    return round(16 * min(3.5, max(1.0, ratio) ** 2))
+
+
 def burn_subtitles(
     video_path: str,
     srt_path: str,
@@ -85,11 +99,8 @@ def burn_subtitles(
     srt_dir = os.path.dirname(os.path.abspath(srt_path)) or "."
     srt_name = os.path.basename(srt_path)
 
-    # libass scales the font to the video HEIGHT, so a fixed size looks small on
-    # wide (16:9) videos and fine on tall/square ones. Scale up for landscape so
-    # the text stays a readable size whatever the aspect ratio.
     w, h, _ = video_dimensions(os.path.abspath(video_path))
-    font_size = round(16 * max(1.0, (w / h) if (w and h) else 1.0))
+    font_size = _font_size(w, h)
     vf = f"subtitles={srt_name}:force_style='{_style(font_size, rtl)}'"
 
     cmd = [
