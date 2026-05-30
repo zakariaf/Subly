@@ -1,23 +1,46 @@
-# Run Subly locally in one command:  docker compose up --build
+# Run Subly locally:  docker compose up --build
 #
-# Reuses the same Dockerfile as production (ffmpeg baked in). This just wires up
-# env + a persistent model cache. No `version:` key — it's obsolete in current
-# Compose. The bot uses Telegram long polling, so there are NO published ports.
+# Big-file mode — lift Telegram's 20 MB download / 50 MB upload caps via a local
+# Bot API server (downloads unlimited, uploads up to 2 GB):
+#
+#   docker compose --profile local-api up --build
+#
+# and in .env set TELEGRAM_API_ID + TELEGRAM_API_HASH (from https://my.telegram.org),
+# TELEGRAM_API_BASE=http://telegram-bot-api:8081, TELEGRAM_LOCAL_MODE=1, and raise
+# MAX_FILE_MB / SEND_LIMIT_MB. See .env.example.
+#
+# No `version:` key — obsolete in current Compose. The bot uses long polling, so no
+# published ports.
 
 services:
+  # Local Telegram Bot API server. Only started with `--profile local-api`.
+  telegram-bot-api:
+    profiles: ["local-api"]
+    image: aiogram/telegram-bot-api:latest
+    environment:
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}
+      TELEGRAM_LOCAL: "1"
+    volumes:
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
+    restart: unless-stopped
+
   bot:
     build: .
     image: subly
-    # The image already defaults to `python bot.py`; no command override needed.
     env_file:
       # Copy .env.example -> .env and fill it in. required:false lets the
       # container also start from variables exported in your shell / passed with -e.
       - path: .env
         required: false
     volumes:
+      # Shared with the bot-api server so the bot can read the (uncapped) files it
+      # downloads. Harmless/empty when running without the local-api profile.
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
       # Persist the faster-whisper model so it isn't re-downloaded on every run.
       - whisper-cache:/root/.cache/huggingface
     restart: unless-stopped
 
 volumes:
+  telegram-bot-api-data:
   whisper-cache:

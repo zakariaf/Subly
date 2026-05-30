@@ -12,6 +12,12 @@ servers:
     hosts:
       - 203.0.113.10            # <-- your server's IP or hostname
 
+# If you keep the telegram-bot-api accessory, set its host to the same server
+# (the base file's &host anchor only resolves within config/deploy.yml):
+# accessories:
+#   telegram-bot-api:
+#     host: 203.0.113.10
+
 # Override anything else from config/deploy.yml as needed, e.g.:
 #
 # ssh:

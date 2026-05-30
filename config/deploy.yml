@@ -24,7 +24,7 @@ servers:
     # Placeholder default — the real host is set in config/deploy.production.yml.
     # Deploying without `-d production` will (intentionally) fail against this.
     hosts:
-      - REPLACE_IN_DEPLOY_PRODUCTION_YML
+      - &host REPLACE_IN_DEPLOY_PRODUCTION_YML
     proxy: false
     cmd: python bot.py
 
@@ -59,14 +59,41 @@ env:
     LLM_BASE_URL: https://api.openai.com/v1
     TRANSLATION_MODEL: gpt-4o-mini
     # Other tunables fall back to subtrans/config.py defaults (see .env.example).
+    #
+    # Big files: route through the local Bot API server accessory below (lifts the
+    # 20/50 MB caps). Remove these four lines + the accessory to use the cloud API.
+    TELEGRAM_API_BASE: http://subly-telegram-bot-api:8081
+    TELEGRAM_LOCAL_MODE: "1"
+    MAX_FILE_MB: "2000"
+    SEND_LIMIT_MB: "2000"
   secret:
     - TELEGRAM_BOT_TOKEN
     - LLM_API_KEY                 # translation provider key (OpenAI, DeepSeek, ...)
     # - OPENAI_API_KEY            # also required if TRANSCRIBE_BACKEND=openai
 
-# Persist the faster-whisper model cache across deploys (local backend only).
+# faster-whisper model cache (persisted across deploys); the second volume is
+# shared with the bot-api accessory so the bot can read the big files it downloads.
 volumes:
   - /opt/subly/whisper-cache:/root/.cache/huggingface
+  - /opt/subly/tg-bot-api-data:/var/lib/telegram-bot-api
+
+# Local Telegram Bot API server — lifts the 20 MB download / 50 MB upload caps
+# (downloads unlimited, uploads up to 2 GB). Needs an api_id + api_hash from
+# https://my.telegram.org, set as TELEGRAM_API_ID / TELEGRAM_API_HASH in
+# .kamal/secrets. Remove this block (and the TELEGRAM_API_* env + shared volume
+# above) to fall back to Telegram's cloud API.
+accessories:
+  telegram-bot-api:
+    image: aiogram/telegram-bot-api:latest
+    host: *host
+    env:
+      clear:
+        TELEGRAM_LOCAL: "1"
+      secret:
+        - TELEGRAM_API_ID
+        - TELEGRAM_API_HASH
+    volumes:
+      - /opt/subly/tg-bot-api-data:/var/lib/telegram-bot-api
 
 # One container, replaced on deploy. Per-chat settings live in memory and reset
 # on restart (see README), so there's nothing to drain.
