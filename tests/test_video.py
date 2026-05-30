@@ -24,8 +24,8 @@ def test_unknown_dimensions_fall_back_to_base():
     assert _font_size(0, 0) == 16
 
 
-def test_rtl_uses_traditional_arabic_naskh_font():
-    assert "Noto Naskh Arabic" in _style(40, rtl=True)
+def test_rtl_uses_a_font_that_shapes_kurdish():
+    assert "Scheherazade New" in _style(40, rtl=True)
 
 
 def test_ltr_uses_latin_font():

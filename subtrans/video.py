@@ -18,14 +18,15 @@ from .audio import ensure_ffmpeg
 # White text on a semi-opaque black box (BorderStyle=3 → the box is filled with
 # OutlineColour; Outline sets its padding) so it stays readable over any scene.
 #
-# Font is picked per script: DejaVu Sans has Arabic codepoints but renders them
-# UNSHAPED, so for right-to-left targets we use Noto Naskh Arabic (shipped by
-# fonts-noto-core in the image). It's a traditional Arabic Naskh face — the style
-# iOS uses for Arabic — and shapes Persian, Arabic and Kurdish (Sorani) correctly
-# while still covering the embedded Latin. FontSize is chosen by _font_size from
-# the video's aspect. Outline is the box padding — 1 so two-line boxes don't overlap.
+# Font is picked per script: DejaVu Sans (Latin default) renders Arabic codepoints
+# UNSHAPED, and the Noto Arabic faces fake Kurdish (Sorani) letters with detachable
+# marks that come out disconnected. So for right-to-left targets we use Scheherazade
+# New — a traditional Arabic Naskh face (the style iOS uses) with genuine, joined
+# Kurdish glyphs — vendored into the image (see Dockerfile). FontSize is chosen by
+# _font_size from the video's aspect. Outline is the box padding — 1 so two-line
+# boxes don't overlap.
 def _style(font_size: int, rtl: bool = False) -> str:
-    font = "Noto Naskh Arabic" if rtl else "DejaVu Sans"
+    font = "Scheherazade New" if rtl else "DejaVu Sans"
     return (
         f"FontName={font},FontSize={font_size},"
         "PrimaryColour=&H00FFFFFF,"      # text: opaque white

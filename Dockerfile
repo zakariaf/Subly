@@ -7,8 +7,10 @@
 #
 # Fonts: this slim image ships none, so libass would render burned-in subtitles
 # as blank/boxes. fonts-dejavu-core covers Latin (our default FontName); the Noto
-# core set adds Arabic-script (Persian, Arabic, Kurdish Sorani), Hebrew, etc., so
-# libass can fall back to a glyph-complete font for RTL targets.
+# core set adds Hebrew and other scripts as a fallback. For Arabic-script RTL
+# (Persian, Arabic, Kurdish Sorani) we vendor Scheherazade New (see the COPY below):
+# the Noto Arabic faces fake Kurdish letters with detachable marks that render
+# disconnected, whereas Scheherazade New has genuine, joined Kurdish glyphs.
 
 FROM python:3.12-slim-bookworm
 
@@ -21,6 +23,11 @@ RUN apt-get update -o Acquire::Retries=8 \
         ffmpeg libgomp1 fontconfig fonts-dejavu-core fonts-noto-core \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Vendored Arabic-script font (SIL Scheherazade New, OFL) so RTL burns render the
+# same here as in our tests, regardless of the base image's Noto version.
+COPY assets/fonts/ /usr/local/share/fonts/subly/
+RUN fc-cache -f
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
