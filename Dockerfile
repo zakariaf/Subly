@@ -14,8 +14,10 @@ FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+# Acquire::Retries makes apt retry transient download failures (flaky mirrors/proxies)
+# instead of aborting the whole build on a single dropped package.
+RUN apt-get update -o Acquire::Retries=8 \
+    && apt-get install -y --no-install-recommends -o Acquire::Retries=8 \
         ffmpeg libgomp1 fontconfig fonts-dejavu-core fonts-noto-core \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
