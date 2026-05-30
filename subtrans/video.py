@@ -19,12 +19,13 @@ from .audio import ensure_ffmpeg
 # OutlineColour; Outline sets its padding) so it stays readable over any scene.
 #
 # Font is picked per script: DejaVu Sans has Arabic codepoints but renders them
-# UNSHAPED, so for right-to-left targets we use Noto Sans Arabic (shipped by
-# fonts-noto-core in the image), which shapes Persian/Arabic correctly and still
-# covers the embedded Latin. FontSize is chosen by _font_size from the video's
-# aspect. Outline is the box padding — kept to 1 so two-line boxes don't overlap.
+# UNSHAPED, so for right-to-left targets we use Noto Naskh Arabic (shipped by
+# fonts-noto-core in the image). It's a traditional Arabic Naskh face — the style
+# iOS uses for Arabic — and shapes Persian, Arabic and Kurdish (Sorani) correctly
+# while still covering the embedded Latin. FontSize is chosen by _font_size from
+# the video's aspect. Outline is the box padding — 1 so two-line boxes don't overlap.
 def _style(font_size: int, rtl: bool = False) -> str:
-    font = "Noto Sans Arabic" if rtl else "DejaVu Sans"
+    font = "Noto Naskh Arabic" if rtl else "DejaVu Sans"
     return (
         f"FontName={font},FontSize={font_size},"
         "PrimaryColour=&H00FFFFFF,"      # text: opaque white
