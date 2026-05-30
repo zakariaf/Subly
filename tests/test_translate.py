@@ -78,3 +78,22 @@ def test_output_is_never_shorter_than_input(monkeypatch):
 
 def test_empty_input_returns_empty():
     assert translate.translate_segments([], "Spanish", Config()) == []
+
+
+# --- caption (describe) ---------------------------------------------------- #
+
+def test_describe_returns_stripped_caption(monkeypatch):
+    monkeypatch.setattr(
+        translate, "_make_client", lambda cfg: _FakeClient("  A fun clip about cats  ")
+    )
+    segs = [Segment(0, 1, "Cats are great."), Segment(1, 2, "Very fluffy.")]
+    assert translate.describe(segs, "English", Config()) == "A fun clip about cats"
+
+
+def test_describe_skips_llm_when_no_transcript(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        translate, "_make_client", lambda cfg: calls.append(1) or _FakeClient("x")
+    )
+    assert translate.describe([], "English", Config()) == ""
+    assert calls == []  # no client built / no API call

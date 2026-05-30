@@ -23,6 +23,16 @@ SYSTEM_PROMPT = (
     '{"segments":[{"id":0,"text":"..."}]} with no extra commentary.'
 )
 
+CAPTION_PROMPT = (
+    "You write an engaging caption for a video — like a social-media post — from "
+    "its transcript. Rules:\n"
+    "- Write it in {language}.\n"
+    "- A short paragraph is good: roughly 1–4 sentences (up to ~60 words). A couple "
+    "of fitting emojis are welcome; no surrounding quotes.\n"
+    "- Capture what the video is about and its hook — don't just transcribe it.\n"
+    "Reply with ONLY the caption."
+)
+
 
 def _make_client(cfg):
     from openai import OpenAI
@@ -35,28 +45,17 @@ def _make_client(cfg):
     )
 
 
-def _translate_batch(client, model, batch, target_language, source_language) -> dict[int, str]:
-    payload = {
-        "target_language": target_language,
-        "source_language": source_language or "auto-detect",
-        "segments": [{"id": i, "text": s.text} for i, s in batch],
-    }
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
-    ]
+def _complete(client, model, messages, *, json_mode: bool) -> str:
+    """One chat completion, dropping the optional params a model/endpoint rejects.
 
-    # Send the richest request, then progressively drop the optional params that
-    # some providers/models reject — `response_format` (non-OpenAI endpoints) and
-    # a non-default `temperature` (e.g. OpenAI reasoning models accept only the
-    # default). Re-raise only if even the minimal request fails, so real errors
-    # (bad key, quota, network) still surface instead of being silently swallowed.
-    variants = [
-        {"response_format": {"type": "json_object"}, "temperature": 0.2},
-        {"response_format": {"type": "json_object"}},
-        {"temperature": 0.2},
-        {},
-    ]
+    Sends `response_format` (when json_mode) and a low `temperature` first, then
+    progressively drops them — `response_format` (non-OpenAI endpoints) and a
+    non-default `temperature` (e.g. reasoning models). Re-raises only if even a
+    minimal request fails, so real errors (bad key, quota) still surface.
+    Returns the message content (possibly "").
+    """
+    rf = {"response_format": {"type": "json_object"}} if json_mode else {}
+    variants = [{**rf, "temperature": 0.2}, dict(rf), {"temperature": 0.2}, {}]
     resp = None
     last_err: Exception | None = None
     for extra in variants:
@@ -67,13 +66,25 @@ def _translate_batch(client, model, batch, target_language, source_language) -> 
             last_err = e
     if resp is None:
         raise last_err
+    return resp.choices[0].message.content or ""
 
-    content = resp.choices[0].message.content or "{}"
-    content = content.strip()
+
+def _translate_batch(client, model, batch, target_language, source_language) -> dict[int, str]:
+    payload = {
+        "target_language": target_language,
+        "source_language": source_language or "auto-detect",
+        "segments": [{"id": i, "text": s.text} for i, s in batch],
+    }
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+    ]
+    content = _complete(client, model, messages, json_mode=True).strip()
     # Be forgiving about stray markdown fences.
     if content.startswith("```"):
         content = content.strip("`")
         content = content[content.find("{"):]
+    content = content or "{}"
 
     out: dict[int, str] = {}
     try:
@@ -110,3 +121,20 @@ def translate_segments(
 
     # Fill any missing ids with the original text so the SRT is never short.
     return [translations.get(i) or segments[i].text for i in range(len(segments))]
+
+
+def describe(segments: list[Segment], target_language: str, cfg) -> str:
+    """A short, post-style caption for the video, written in the target language.
+
+    Returns "" if there's nothing to summarise. Built from the transcript (capped
+    so the prompt stays small); the LLM also translates it into target_language.
+    """
+    transcript = " ".join(s.text for s in segments).strip()[:4000]
+    if not transcript:
+        return ""
+    client = _make_client(cfg)
+    messages = [
+        {"role": "system", "content": CAPTION_PROMPT.format(language=target_language)},
+        {"role": "user", "content": transcript},
+    ]
+    return _complete(client, cfg.translation_model, messages, json_mode=False).strip()

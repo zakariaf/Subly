@@ -33,7 +33,7 @@ from telegram.ext import (
 from subtrans.config import Config
 from subtrans.audio import extract_audio
 from subtrans.transcribe import transcribe
-from subtrans.translate import translate_segments
+from subtrans.translate import translate_segments, describe
 from subtrans.srt import build_srt, is_rtl
 from subtrans.video import has_video_stream, burn_subtitles, video_dimensions
 
@@ -51,7 +51,20 @@ STAGE_TEXT = {
     "translate": "🌐 Translating…",
     "build": "📝 Building subtitles…",
     "burn": "🔥 Burning subtitles into the video (re-encoding)…",
+    "caption": "✍️ Writing a caption…",
 }
+
+
+def _safe_caption(segments, target: str) -> str:
+    """LLM post-style caption for the burned video; falls back on any failure.
+
+    Capped at Telegram's 1024-char caption limit.
+    """
+    try:
+        return (describe(segments, target, CFG) or f"Subtitled · {target}")[:1024]
+    except Exception:
+        logger.exception("Caption generation failed for %s", target)
+        return f"Subtitled · {target}"
 
 
 # --------------------------------------------------------------------------- #
@@ -297,6 +310,8 @@ async def _process_media(context, chat_id, file_id, filename, target, bilingual,
                             chat_id, document=f, filename=os.path.basename(srt_path),
                         )
             else:
+                await show("caption")
+                caption = await asyncio.to_thread(_safe_caption, segments, target)
                 # Tell Telegram the real dimensions so the inline preview keeps
                 # the video's aspect ratio (otherwise it shows a square preview).
                 w, h, dur = video_dimensions(burned_path)
@@ -304,7 +319,7 @@ async def _process_media(context, chat_id, file_id, filename, target, bilingual,
                     await context.bot.send_video(
                         chat_id, video=f, supports_streaming=True,
                         width=w or None, height=h or None, duration=dur or None,
-                        caption=f"Subtitled · {target}",
+                        caption=caption,
                     )
 
         await status.edit_text(f"✅ Done — {len(segments)} lines → {target}")
