@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Subly" width="128">
+</p>
+
 # Subly — subtitle translation bot
 
 A focused subtitle pipeline (Python package: `subtrans`) — **no TTS, no dubbing, no remux**. It takes a video/audio file,

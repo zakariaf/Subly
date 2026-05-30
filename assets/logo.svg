@@ -1,0 +1,19 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="48" y1="48" x2="464" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#C026D3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- app-icon background -->
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+
+  <!-- speech bubble (it's a bot) = the subtitle card -->
+  <rect x="96" y="120" width="320" height="212" rx="46" fill="#FFFFFF"/>
+  <path d="M172 326 L172 398 L242 332 Z" fill="#FFFFFF"/>
+
+  <!-- two subtitle lines in two colours = original + translation -->
+  <rect x="140" y="186" width="232" height="30" rx="15" fill="#4F46E5"/>
+  <rect x="140" y="244" width="150" height="30" rx="15" fill="#C026D3"/>
+</svg>
