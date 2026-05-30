@@ -247,6 +247,7 @@ async def _process_media(context, chat_id, file_id, filename, target, bilingual,
     """
     workdir = tempfile.mkdtemp(prefix="subtrans_")
     media_path = os.path.join(workdir, filename)
+    server_file = None  # the local Bot API server's on-disk copy of the download
 
     async def show(stage):
         try:
@@ -256,6 +257,10 @@ async def _process_media(context, chat_id, file_id, filename, target, bilingual,
 
     try:
         tg_file = await context.bot.get_file(file_id)
+        # With a local Bot API server, getFile downloads to disk and keeps that
+        # copy forever — remember the path so we can delete it in `finally`.
+        if CFG.telegram_local_mode and tg_file.file_path:
+            server_file = tg_file.file_path
         await tg_file.download_to_drive(media_path)
 
         await show("extract")
@@ -330,6 +335,13 @@ async def _process_media(context, chat_id, file_id, filename, target, bilingual,
         await status.edit_text("❌ Something went wrong while processing that file. Please try again.")
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
+        # Delete the local Bot API server's copy too, so user videos don't pile up
+        # on the server (the server never cleans these up itself).
+        if server_file:
+            try:
+                os.remove(server_file)
+            except OSError:
+                pass
 
 
 # --------------------------------------------------------------------------- #
