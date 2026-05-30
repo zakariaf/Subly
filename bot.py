@@ -41,9 +41,6 @@ logger = logging.getLogger(__name__)
 
 CFG = Config.from_env()
 
-# Standard Bot API lets bots SEND files up to 50 MB (2 GB with a local Bot API server).
-SEND_LIMIT_MB = 50
-
 # Quick-pick languages shown when a chat hasn't chosen one yet. Any other language
 # is still reachable with `/lang <language>` or by captioning the file.
 LANGUAGES = ["English", "Persian", "Kurdish (Sorani)", "Spanish", "German", "Arabic"]
@@ -289,10 +286,10 @@ async def _process_media(context, chat_id, file_id, filename, target, bilingual,
             await asyncio.to_thread(burn_subtitles, media_path, srt_path, burned_path)
 
             burned_mb = os.path.getsize(burned_path) / (1024 * 1024)
-            if burned_mb > SEND_LIMIT_MB:
+            if burned_mb > CFG.send_limit_mb:
                 await status.edit_text(
                     f"✅ Subtitles done, but the rendered video is {burned_mb:.0f} MB — over "
-                    f"Telegram's {SEND_LIMIT_MB} MB send limit for bots. Sent the .srt instead."
+                    f"the {CFG.send_limit_mb} MB send limit. Sent the .srt instead."
                 )
                 if mode == "video":  # srt wasn't sent above; send it now
                     with open(srt_path, "rb") as f:
@@ -341,7 +338,16 @@ def main() -> None:
     if not CFG.telegram_token:
         raise SystemExit("Set TELEGRAM_BOT_TOKEN in your environment / .env file.")
 
-    app = Application.builder().token(CFG.telegram_token).build()
+    builder = Application.builder().token(CFG.telegram_token)
+    # Point at a local Bot API server (lifts the 20/50 MB caps) when configured;
+    # otherwise PTB defaults to Telegram's cloud API.
+    if CFG.telegram_api_base:
+        base = CFG.telegram_api_base.rstrip("/")
+        builder = builder.base_url(f"{base}/bot").base_file_url(f"{base}/file/bot")
+        if CFG.telegram_local_mode:
+            builder = builder.local_mode(True)  # files are read from the shared disk
+        logger.info("Using Bot API server %s (local_mode=%s)", base, CFG.telegram_local_mode)
+    app = builder.build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))

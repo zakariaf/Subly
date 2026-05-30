@@ -19,7 +19,12 @@ def _get(name: str, default: str = "") -> str:
 class Config:
     # --- Telegram ---
     telegram_token: str = ""
-    max_file_mb: int = 20  # Bot API getFile limit is 20MB unless you run a local Bot API server
+    max_file_mb: int = 20    # cloud Bot API getFile cap; raise it with a local Bot API server
+    send_limit_mb: int = 50  # cloud Bot API send cap; up to 2000 with a local server
+    # Optional local Bot API server (https://github.com/tdlib/telegram-bot-api) to lift the
+    # caps above. Empty -> Telegram's cloud API. e.g. "http://telegram-bot-api:8081".
+    telegram_api_base: str = ""
+    telegram_local_mode: bool = False
 
     # --- Transcription ---
     # backend: "local" (faster-whisper, CPU, free) or "openai" (OpenAI Whisper API)
@@ -56,6 +61,9 @@ class Config:
         return cls(
             telegram_token=_get("TELEGRAM_BOT_TOKEN"),
             max_file_mb=int(_get("MAX_FILE_MB", "20")),
+            send_limit_mb=int(_get("SEND_LIMIT_MB", "50")),
+            telegram_api_base=_get("TELEGRAM_API_BASE"),
+            telegram_local_mode=_get("TELEGRAM_LOCAL_MODE").lower() in ("1", "true", "yes"),
             transcribe_backend=_get("TRANSCRIBE_BACKEND", "local"),
             whisper_model=_get("WHISPER_MODEL", "small"),
             whisper_device=_get("WHISPER_DEVICE", "auto"),
