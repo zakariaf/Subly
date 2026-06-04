@@ -13,7 +13,7 @@ media file
    │
    ├─ ffmpeg ─────────► 16 kHz mono WAV
    ├─ Whisper ────────► timed segments  (start, end, text)
-   ├─ LLM ────────────► translate each segment (batched, ids preserved)
+   ├─ LLM ────────────► translate (chunked, glossary-consistent, ids preserved)
    ├─ build SRT ──────► subtitles.srt  (mono or bilingual)
    └─ ffmpeg (opt) ───► burn subtitles into the video → subbed.mp4
 ```
@@ -48,6 +48,11 @@ Subtitles desync the moment a translator merges or drops a line. Each segment is
 tagged with a stable integer id and the model is told to return the *same ids*;
 any id it fails to return falls back to the original text, so the SRT is **never
 shorter than the transcript** and timestamps always line up.
+
+Within one call the model also works in steps — pin a consistent rendering for each
+recurring term, translate, then self-review and fix — and a small **glossary** of
+those term decisions is carried from each chunk into the next, so the same word is
+translated the same way across the whole video.
 
 ## Setup
 
@@ -141,7 +146,7 @@ Burning is also the slow step on CPU; use `/output srt` if you only need the fil
 subtrans/
   audio.py       ffmpeg audio extraction
   transcribe.py  faster-whisper + OpenAI Whisper backends
-  translate.py   batched, id-stable LLM translation
+  translate.py   chunked, glossary-consistent, id-stable translation
   srt.py         timestamp + SRT assembly
   video.py       burn-in (hard) + mux (soft) subtitles
   pipeline.py    glue + stage callbacks

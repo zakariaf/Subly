@@ -31,28 +31,70 @@ class _FakeClient:
         self.chat = SimpleNamespace(completions=_FakeCompletions(content))
 
 
-# --- _translate_batch parsing ---------------------------------------------- #
+class _ScriptedCompletions:
+    """Returns canned responses in order — one per create() call."""
+
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.calls = []
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        return _resp(self.responses.pop(0) if self.responses else "{}")
+
+
+class _ScriptedClient:
+    def __init__(self, *responses):
+        self.chat = SimpleNamespace(completions=_ScriptedCompletions(responses))
+
+
+# --- _translate_batch: two-block parsing ----------------------------------- #
 
 def _batch():
     return [(0, Segment(0, 1, "Hello")), (1, Segment(1, 2, "World"))]
 
 
-def test_parses_clean_json():
-    client = _FakeClient('{"segments":[{"id":0,"text":"Hola"},{"id":1,"text":"Mundo"}]}')
-    out = translate._translate_batch(client, "m", _batch(), "Spanish", "en")
-    assert out == {0: "Hola", 1: "Mundo"}
+def test_parses_two_block_reply_and_extracts_glossary():
+    content = (
+        '<glossary>{"prompt":"پرامپت"}</glossary>'
+        '<translation>{"segments":[{"id":0,"text":"Hola"},{"id":1,"text":"Mundo"}]}</translation>'
+    )
+    segs, gloss = translate._translate_batch(_FakeClient(content), "m", _batch(), "Spanish", "en", {})
+    assert segs == {0: "Hola", 1: "Mundo"}
+    assert gloss == {"prompt": "پرامپت"}
 
 
-def test_strips_markdown_fences():
-    client = _FakeClient('```json\n{"segments":[{"id":0,"text":"Hola"}]}\n```')
-    out = translate._translate_batch(client, "m", _batch(), "Spanish", "en")
-    assert out == {0: "Hola"}
+def test_parses_translation_block_with_fences():
+    content = '<translation>```json\n{"segments":[{"id":0,"text":"Hola"}]}\n```</translation>'
+    segs, _ = translate._translate_batch(_FakeClient(content), "m", _batch(), "Spanish", "en", {})
+    assert segs == {0: "Hola"}
 
 
-def test_malformed_json_yields_empty():
-    client = _FakeClient("not json at all")
-    out = translate._translate_batch(client, "m", _batch(), "Spanish", "en")
-    assert out == {}
+def test_bare_json_without_blocks_still_parses():
+    # Tolerant fallback: a reply that's just the segments JSON, no <translation> tag.
+    segs, gloss = translate._translate_batch(
+        _FakeClient('{"segments":[{"id":0,"text":"Hola"}]}'), "m", _batch(), "Spanish", "en", {}
+    )
+    assert segs == {0: "Hola"}
+    assert gloss == {}
+
+
+def test_malformed_reply_yields_empty():
+    segs, gloss = translate._translate_batch(
+        _FakeClient("not json at all"), "m", _batch(), "Spanish", "en", {}
+    )
+    assert segs == {} and gloss == {}
+
+
+# --- the prompt contract --------------------------------------------------- #
+
+def test_prompt_keeps_process_and_output_contract():
+    # The self-review step, the sync contract, and the two output blocks the parser
+    # reads must all survive any future edit to the prompt.
+    p = translate.SYSTEM_PROMPT.lower()
+    assert "review" in p
+    assert "one id in -> one id out" in p
+    assert "<glossary>" in p and "<translation>" in p
 
 
 # --- the id-stability invariant -------------------------------------------- #
@@ -78,6 +120,24 @@ def test_output_is_never_shorter_than_input(monkeypatch):
 
 def test_empty_input_returns_empty():
     assert translate.translate_segments([], "Spanish", Config()) == []
+
+
+# --- glossary carry-over between chunks ------------------------------------ #
+
+def test_glossary_threads_from_one_chunk_into_the_next(monkeypatch):
+    client = _ScriptedClient(
+        '<glossary>{"prompt":"پرامپت"}</glossary>'
+        '<translation>{"segments":[{"id":0,"text":"a"}]}</translation>',
+        '<glossary>{"prompt":"پرامپت"}</glossary>'
+        '<translation>{"segments":[{"id":1,"text":"b"}]}</translation>',
+    )
+    monkeypatch.setattr(translate, "_make_client", lambda cfg: client)
+    segs = [Segment(0, 1, "the prompt"), Segment(1, 2, "again")]
+    out = translate.translate_segments(segs, "Persian", Config(translation_batch_size=1))
+    assert out == ["a", "b"]
+    # The second chunk's request carries the glossary learned in the first.
+    second_user = client.chat.completions.calls[1]["messages"][1]["content"]
+    assert "پرامپت" in second_user
 
 
 # --- caption (describe) ---------------------------------------------------- #

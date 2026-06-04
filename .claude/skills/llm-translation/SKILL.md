@@ -26,11 +26,14 @@ Invoke this skill before:
    Both share `cfg.request_timeout` / `cfg.max_retries`. Never construct a client
    with default timeouts.
 
-2. **Stay endpoint-portable.** `translate._translate_batch` sends the richest
-   request, then progressively drops the optional params a model/endpoint rejects
-   — `response_format`, then `temperature` — before falling back further; a
-   forgiving parser strips markdown fences and tolerates malformed output. This is
-   what lets OpenAI, DeepSeek, **Gemini** (OpenAI-compatible at
+2. **Stay endpoint-portable.** Translation asks for a two-block reply — a
+   `<glossary>` and a `<translation>` JSON object — so `translate._translate_batch`
+   calls `_complete` with `json_mode=False` (a single `response_format=json_object`
+   would forbid the glossary block). The block parser (`_extract_block` +
+   `_loads_object`) strips markdown fences and tolerates stray prose, and
+   `_complete` still drops any optional param a model/endpoint rejects
+   (`response_format` in json mode, then `temperature`). This is what lets OpenAI,
+   DeepSeek, **Gemini** (OpenAI-compatible at
    `https://generativelanguage.googleapis.com/v1beta/openai/`, still beta — rejects
    some params), and local servers all work. Do **not** "upgrade" to strict
    Pydantic `.parse()` / `json_schema` — it breaks the non-OpenAI endpoints we support.
@@ -46,9 +49,11 @@ Invoke this skill before:
    not concatenated into the prompt.
 
 5. **The prompt enforces the sync contract: one id in → one id out, never merge /
-   split / reorder / drop.** If you edit the prompt, that instruction stays. The
-   parser returns a `dict[int, str]`; the *caller* fills gaps with originals (see
-   the `subtitle-pipeline` skill — this is the invariant).
+   split / reorder / drop.** If you edit the prompt, that instruction stays.
+   `_translate_batch` returns `(translations, glossary)`; `translate_segments`
+   threads the glossary from each chunk into the next for consistent terminology and
+   fills any missing id with the original (see the `subtitle-pipeline` skill — this
+   is the invariant).
 
 6. **One client per job, batched.** Construct the client once in
    `translate_segments`, then loop batches of `cfg.translation_batch_size`. Don't
@@ -91,6 +96,13 @@ if resp is None:
     raise last_err  # real error (bad key, quota) — surface it
 ```
 
+```python
+# Translation: a two-block reply, glossary threaded chunk -> chunk, ids backfilled.
+content = _complete(client, model, messages, json_mode=False)   # not json_object
+translations = _parse_segments(_extract_block(content, "translation") or content)
+glossary = {**glossary, **_parse_glossary(_extract_block(content, "glossary"))}
+```
+
 ## Anti-patterns to flag
 
 - ✗ `OpenAI(api_key=..., base_url=...)` with no `timeout` / `max_retries`.
@@ -101,6 +113,7 @@ if resp is None:
 - ✗ Constructing a new client per batch or per segment.
 - ✗ Letting an `openai.*` SDK object escape `translate.py` / `transcribe.py` to a caller.
 - ✗ Parsing the model response without tolerating markdown fences / malformed JSON.
+- ✗ Re-enabling `response_format=json_object` for the translation call — it forbids the `<glossary>` block the prompt emits.
 
 ## Why these rules
 

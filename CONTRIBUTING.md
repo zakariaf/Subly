@@ -33,7 +33,7 @@ subtrans/        the library — importable, no side effects at import time
   config.py      all configuration, env-driven (see "Configuration")
   audio.py       ffmpeg audio extraction
   transcribe.py  Whisper backends (local + OpenAI)
-  translate.py   batched, id-stable LLM translation
+  translate.py   chunked, glossary-consistent, id-stable translation
   srt.py         pure timestamp + SRT assembly
   video.py       burn-in / mux subtitles
   pipeline.py    glue: wires the stages together
@@ -99,12 +99,14 @@ be tested without Telegram.
 - **Catch specific exceptions** when you act on them (`RateLimitError`,
   `APITimeoutError`, `APIConnectionError`, `APIStatusError`) rather than bare
   `Exception`.
-- **Stay endpoint-portable.** We use `response_format={"type":"json_object"}` with a
-  forgiving parser and a plain-text fallback (`translate._translate_batch`) instead
-  of strict Pydantic `.parse()` / `json_schema`. This is deliberate: it keeps us
-  working against OpenAI-compatible endpoints (Together, DeepSeek, local servers)
-  that don't support strict schema mode. Don't "upgrade" to strict mode without
-  preserving the fallback.
+- **Stay endpoint-portable.** Avoid strict Pydantic `.parse()` / `json_schema`,
+  which OpenAI-compatible endpoints (Together, DeepSeek, Gemini, local servers)
+  often don't support. Translation asks for a two-block reply — a `<glossary>` and a
+  `<translation>` JSON object — so it runs in non-JSON mode (a single
+  `response_format=json_object` would forbid the glossary block), and a forgiving
+  parser (`translate._translate_batch`) tolerates fences and stray prose. `_complete`
+  still drops any optional param a model rejects (`response_format` in json mode,
+  then `temperature`). Don't "upgrade" to strict schema mode.
 
 ## Telegram bot conventions
 
