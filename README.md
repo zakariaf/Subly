@@ -114,11 +114,6 @@ API (`OPENAI_API_KEY`), or `TRANSCRIBE_BACKEND=assemblyai` for AssemblyAI STT
 `ASSEMBLYAI_BASE_URL=https://api.eu.assemblyai.com` for the EU). AssemblyAI falls
 back to local Whisper on any failure.
 
-With AssemblyAI, subtitle lines are cut from word-level timestamps — at speech
-pauses (`MAX_SUBTITLE_GAP`) and capped at `MAX_SUBTITLE_DURATION`. Set
-`AI_SEGMENTATION=true` to instead let the translation LLM decide the line breaks
-(one extra call per job; falls back to the rule-based cuts on any failure).
-
 **Translation** — any OpenAI-compatible LLM. Point `LLM_BASE_URL`, `LLM_API_KEY`,
 and `TRANSLATION_MODEL` at:
 - **OpenAI** — `https://api.openai.com/v1`, e.g. `gpt-4o-mini`
