@@ -103,12 +103,12 @@ def _font_size(width: int, height: int) -> int:
     libass scales FontSize to the video HEIGHT, so a height-proportional size
     looks right on tall/square clips but tiny on wide (16:9) ones — a landscape
     video is displayed in a short strip. Portrait/square stay at the base size;
-    landscape scales up with the squared aspect ratio (empirically ~2x at 16:9),
-    capped so an ultra-wide clip doesn't blow the text up. Unknown dimensions
-    (0) fall back to the base size.
+    landscape scales up linearly with the aspect ratio (~1.8x at 16:9), capped at
+    2x so an ultra-wide clip doesn't blow the text up. Unknown dimensions (0) fall
+    back to the base size.
     """
     ratio = (width / height) if (width and height) else 1.0
-    return round(16 * min(3.5, max(1.0, ratio) ** 2))
+    return round(16 * min(2.0, max(1.0, ratio)))
 
 
 def burn_subtitles(
