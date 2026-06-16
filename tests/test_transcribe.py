@@ -52,6 +52,19 @@ def test_no_words_yields_no_segments():
     assert transcribe._words_to_segments([], max_duration=6.0) == []
 
 
+def test_words_split_on_a_long_pause():
+    # "Hello there" ... 2.5s of silence ... "again" -> break at the pause
+    words = [_word(0, 500, "Hello"), _word(700, 1000, "there"), _word(3500, 4000, "again")]
+    out = transcribe._words_to_segments(words, max_duration=6.0, max_gap=2.0)
+    assert out == [Segment(0.0, 1.0, "Hello there"), Segment(3.5, 4.0, "again")]
+
+
+def test_words_within_the_gap_stay_together():
+    words = [_word(0, 500, "a"), _word(1900, 2400, "b")]  # 1.4s gap, under the cap
+    out = transcribe._words_to_segments(words, max_duration=6.0, max_gap=2.0)
+    assert out == [Segment(0.0, 2.4, "a b")]
+
+
 # --- transcribe() dispatch + the Whisper fallback ---
 
 def test_assemblyai_backend_without_key_uses_local(monkeypatch):

@@ -99,14 +99,15 @@ def _transcribe_openai(
 _MAX_CUE_CHARS = 84  # ~2 subtitle lines; keeps cues readable for dense speech
 
 
-def _words_to_segments(words: list, max_duration: float) -> list[Segment]:
-    """Pack timed words into subtitle cues capped by duration and length, in order.
+def _words_to_segments(words: list, max_duration: float = 6.0, max_gap: float = 2.0) -> list[Segment]:
+    """Pack timed words into subtitle cues, in order, broken at natural pauses.
 
     AssemblyAI returns whole sentences (often 20-30s), so we build cues from its
-    word-level timestamps instead: a cue grows until the next word would push it
-    past `max_duration` seconds or `_MAX_CUE_CHARS`, then breaks at that word
-    boundary. start/end come straight from the words, so cues never desync (see the
-    subtitle-pipeline skill).
+    word-level timestamps instead. A cue grows until the next word would either
+    follow a silence longer than `max_gap` seconds (a natural pause), push the cue
+    past `max_duration` seconds, or overflow `_MAX_CUE_CHARS` — then it breaks at
+    that word boundary. start/end come straight from the words, so cues never
+    desync (see the subtitle-pipeline skill).
     """
     segments: list[Segment] = []
     cue: list = []
@@ -114,9 +115,10 @@ def _words_to_segments(words: list, max_duration: float) -> list[Segment]:
         if not (word.text and word.text.strip()):
             continue
         if cue:
+            gap = (word.start - cue[-1].end) / 1000.0
             span = (word.end - cue[0].start) / 1000.0
             chars = sum(len(w.text) + 1 for w in cue) + len(word.text)
-            if span > max_duration or chars > _MAX_CUE_CHARS:
+            if gap > max_gap or span > max_duration or chars > _MAX_CUE_CHARS:
                 segments.append(_to_cue(cue))
                 cue = []
         cue.append(word)
@@ -141,6 +143,7 @@ def _transcribe_assemblyai(
     language: str | None = None,
     timeout: float = 60.0,
     max_subtitle_duration: float = 6.0,
+    max_subtitle_gap: float = 2.0,
 ) -> tuple[list[Segment], str]:
     import assemblyai as aai
 
@@ -157,7 +160,7 @@ def _transcribe_assemblyai(
     if transcript.status == aai.TranscriptStatus.error:
         raise RuntimeError(transcript.error)
 
-    segments = _words_to_segments(transcript.words or [], max_subtitle_duration)
+    segments = _words_to_segments(transcript.words or [], max_subtitle_duration, max_subtitle_gap)
     detected = transcript.json_response.get("language_code") or language or "unknown"
     return segments, detected
 
@@ -178,6 +181,7 @@ def transcribe(audio_path: str, cfg, language: str | None = None) -> tuple[list[
                 language=language,
                 timeout=cfg.request_timeout,
                 max_subtitle_duration=cfg.max_subtitle_duration,
+                max_subtitle_gap=cfg.max_subtitle_gap,
             )
         except Exception as e:
             # Broad on purpose: the user opted into "if AssemblyAI is unavailable,

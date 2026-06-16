@@ -10,6 +10,7 @@ _ENV_VARS = [
     "LLM_API_KEY", "LLM_BASE_URL", "TRANSLATION_MODEL", "TRANSLATION_BATCH_SIZE",
     "REQUEST_TIMEOUT", "MAX_RETRIES", "DEFAULT_TARGET_LANGUAGE",
     "MAX_CONCURRENT_JOBS", "MAX_CONCURRENT_BURNS", "MAX_SUBTITLE_DURATION",
+    "MAX_SUBTITLE_GAP",
 ]
 
 
@@ -38,6 +39,7 @@ def test_defaults(monkeypatch):
     assert cfg.max_concurrent_jobs == 4
     assert cfg.max_concurrent_burns == 1
     assert cfg.max_subtitle_duration == 6.0
+    assert cfg.max_subtitle_gap == 2.0
 
 
 def test_local_bot_api_mode(monkeypatch):
