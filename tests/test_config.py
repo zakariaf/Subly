@@ -6,6 +6,7 @@ _ENV_VARS = [
     "TELEGRAM_BOT_TOKEN", "MAX_FILE_MB", "SEND_LIMIT_MB", "TELEGRAM_API_BASE",
     "TELEGRAM_LOCAL_MODE", "TRANSCRIBE_BACKEND", "WHISPER_MODEL",
     "WHISPER_DEVICE", "WHISPER_COMPUTE_TYPE", "OPENAI_API_KEY", "OPENAI_BASE_URL",
+    "ASSEMBLYAI_API_KEY", "ASSEMBLYAI_BASE_URL", "ASSEMBLYAI_SPEECH_MODELS",
     "LLM_API_KEY", "LLM_BASE_URL", "TRANSLATION_MODEL", "TRANSLATION_BATCH_SIZE",
     "REQUEST_TIMEOUT", "MAX_RETRIES", "DEFAULT_TARGET_LANGUAGE",
 ]
@@ -21,6 +22,9 @@ def test_defaults(monkeypatch):
     cfg = Config.from_env()
     assert cfg.transcribe_backend == "local"
     assert cfg.whisper_model == "small"
+    assert cfg.assemblyai_api_key == ""
+    assert cfg.assemblyai_base_url == "https://api.assemblyai.com"
+    assert cfg.assemblyai_speech_models == ("universal-2",)
     assert cfg.max_file_mb == 20
     assert cfg.send_limit_mb == 50
     assert cfg.telegram_api_base == ""
@@ -60,6 +64,12 @@ def test_overrides_and_type_coercion(monkeypatch):
     assert cfg.transcribe_backend == "openai"
     assert cfg.llm_base_url == "https://api.deepseek.com"
     assert cfg.translation_model == "deepseek-chat"
+
+
+def test_assemblyai_speech_models_parsed_from_csv(monkeypatch):
+    _clear_env(monkeypatch)
+    monkeypatch.setenv("ASSEMBLYAI_SPEECH_MODELS", " universal-3-pro , universal-2 ")
+    assert Config.from_env().assemblyai_speech_models == ("universal-3-pro", "universal-2")
 
 
 def test_values_are_stripped(monkeypatch):

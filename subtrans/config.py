@@ -38,6 +38,14 @@ class Config:
     # have no transcription endpoint, so this stays pointed at OpenAI.
     openai_api_key: str = ""
     openai_base_url: str = "https://api.openai.com/v1"
+    # assemblyai backend (AssemblyAI Speech-to-Text) — used when
+    # transcribe_backend == "assemblyai"; falls back to the local backend on any
+    # failure. EU users point the base URL at https://api.eu.assemblyai.com.
+    assemblyai_api_key: str = ""
+    assemblyai_base_url: str = "https://api.assemblyai.com"
+    # Ordered fallback list of speech models. Universal-2 is the default because
+    # Universal-3 Pro doesn't cover some languages we need (e.g. Arabic, Persian).
+    assemblyai_speech_models: tuple[str, ...] = ("universal-2",)
 
     # --- Translation (any OpenAI-compatible LLM: OpenAI, DeepSeek, Together, local) ---
     # Independent of the transcription credentials above, so you can translate with
@@ -70,6 +78,13 @@ class Config:
             whisper_compute_type=_get("WHISPER_COMPUTE_TYPE", "int8"),
             openai_api_key=_get("OPENAI_API_KEY"),
             openai_base_url=_get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            assemblyai_api_key=_get("ASSEMBLYAI_API_KEY"),
+            assemblyai_base_url=_get("ASSEMBLYAI_BASE_URL", "https://api.assemblyai.com"),
+            assemblyai_speech_models=tuple(
+                m.strip()
+                for m in _get("ASSEMBLYAI_SPEECH_MODELS", "universal-2").split(",")
+                if m.strip()
+            ),
             llm_api_key=_get("LLM_API_KEY"),
             llm_base_url=_get("LLM_BASE_URL", "https://api.openai.com/v1"),
             translation_model=_get("TRANSLATION_MODEL", "gpt-4o-mini"),

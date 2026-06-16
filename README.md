@@ -109,7 +109,10 @@ different providers — e.g. local Whisper for transcription + DeepSeek for tran
 **Transcription** — `TRANSCRIBE_BACKEND=local` runs faster-whisper on your machine
 (CPU, free, no key; `WHISPER_MODEL=small` is the default, `medium` is a step up in
 quality, `large-v3` is best). Set `TRANSCRIBE_BACKEND=openai` for the OpenAI Whisper
-API (`OPENAI_API_KEY`).
+API (`OPENAI_API_KEY`), or `TRANSCRIBE_BACKEND=assemblyai` for AssemblyAI STT
+(`ASSEMBLYAI_API_KEY`; defaults to the `universal-2` model, set
+`ASSEMBLYAI_BASE_URL=https://api.eu.assemblyai.com` for the EU). AssemblyAI falls
+back to local Whisper on any failure.
 
 **Translation** — any OpenAI-compatible LLM. Point `LLM_BASE_URL`, `LLM_API_KEY`,
 and `TRANSLATION_MODEL` at:
@@ -145,7 +148,7 @@ Burning is also the slow step on CPU; use `/output srt` if you only need the fil
 ```
 subtrans/
   audio.py       ffmpeg audio extraction
-  transcribe.py  faster-whisper + OpenAI Whisper backends
+  transcribe.py  faster-whisper + OpenAI Whisper + AssemblyAI backends
   translate.py   chunked, glossary-consistent, id-stable translation
   srt.py         timestamp + SRT assembly
   video.py       burn-in (hard) + mux (soft) subtitles
