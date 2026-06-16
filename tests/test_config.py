@@ -39,7 +39,7 @@ def test_defaults(monkeypatch):
     assert cfg.max_concurrent_jobs == 4
     assert cfg.max_concurrent_burns == 1
     assert cfg.max_subtitle_duration == 6.0
-    assert cfg.max_subtitle_gap == 2.0
+    assert cfg.max_subtitle_gap == 1.0
 
 
 def test_local_bot_api_mode(monkeypatch):

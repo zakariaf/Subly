@@ -77,7 +77,7 @@ class Config:
     max_subtitle_duration: float = 6.0
     # A silence longer than this (seconds) between two words ends the current cue,
     # so lines break at natural speech pauses rather than mid-phrase.
-    max_subtitle_gap: float = 2.0
+    max_subtitle_gap: float = 1.0
 
     # --- Defaults ---
     default_target_language: str = "English"
@@ -112,6 +112,6 @@ class Config:
             max_concurrent_jobs=int(_get("MAX_CONCURRENT_JOBS", "4")),
             max_concurrent_burns=int(_get("MAX_CONCURRENT_BURNS", "1")),
             max_subtitle_duration=float(_get("MAX_SUBTITLE_DURATION", "6")),
-            max_subtitle_gap=float(_get("MAX_SUBTITLE_GAP", "2")),
+            max_subtitle_gap=float(_get("MAX_SUBTITLE_GAP", "1")),
             default_target_language=_get("DEFAULT_TARGET_LANGUAGE", "English"),
         )

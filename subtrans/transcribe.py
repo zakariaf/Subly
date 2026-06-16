@@ -99,7 +99,7 @@ def _transcribe_openai(
 _MAX_CUE_CHARS = 84  # ~2 subtitle lines; keeps cues readable for dense speech
 
 
-def _words_to_segments(words: list, max_duration: float = 6.0, max_gap: float = 2.0) -> list[Segment]:
+def _words_to_segments(words: list, max_duration: float = 6.0, max_gap: float = 1.0) -> list[Segment]:
     """Pack timed words into subtitle cues, in order, broken at natural pauses.
 
     AssemblyAI returns whole sentences (often 20-30s), so we build cues from its
@@ -143,7 +143,7 @@ def _transcribe_assemblyai(
     language: str | None = None,
     timeout: float = 60.0,
     max_subtitle_duration: float = 6.0,
-    max_subtitle_gap: float = 2.0,
+    max_subtitle_gap: float = 1.0,
 ) -> tuple[list[Segment], str]:
     import assemblyai as aai
 
