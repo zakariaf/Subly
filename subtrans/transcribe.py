@@ -96,17 +96,41 @@ def _transcribe_openai(
 # AssemblyAI backend
 # --------------------------------------------------------------------------- #
 
-def _sentences_to_segments(sentences: list) -> list[Segment]:
-    """Map AssemblyAI sentences (timestamps in ms) to Segments (seconds), in order.
+_MAX_CUE_CHARS = 84  # ~2 subtitle lines; keeps cues readable for dense speech
 
-    One sentence -> one Segment; empties are dropped. Order is preserved so the SRT
-    can never desync from its timestamps (see the subtitle-pipeline skill).
+
+def _words_to_segments(words: list, max_duration: float) -> list[Segment]:
+    """Pack timed words into subtitle cues capped by duration and length, in order.
+
+    AssemblyAI returns whole sentences (often 20-30s), so we build cues from its
+    word-level timestamps instead: a cue grows until the next word would push it
+    past `max_duration` seconds or `_MAX_CUE_CHARS`, then breaks at that word
+    boundary. start/end come straight from the words, so cues never desync (see the
+    subtitle-pipeline skill).
     """
-    return [
-        Segment(start=s.start / 1000.0, end=s.end / 1000.0, text=s.text.strip())
-        for s in sentences
-        if s.text and s.text.strip()
-    ]
+    segments: list[Segment] = []
+    cue: list = []
+    for word in words:
+        if not (word.text and word.text.strip()):
+            continue
+        if cue:
+            span = (word.end - cue[0].start) / 1000.0
+            chars = sum(len(w.text) + 1 for w in cue) + len(word.text)
+            if span > max_duration or chars > _MAX_CUE_CHARS:
+                segments.append(_to_cue(cue))
+                cue = []
+        cue.append(word)
+    if cue:
+        segments.append(_to_cue(cue))
+    return segments
+
+
+def _to_cue(words: list) -> Segment:
+    return Segment(
+        start=words[0].start / 1000.0,
+        end=words[-1].end / 1000.0,
+        text=" ".join(w.text.strip() for w in words),
+    )
 
 
 def _transcribe_assemblyai(
@@ -116,6 +140,7 @@ def _transcribe_assemblyai(
     speech_models: tuple[str, ...] = ("universal-2",),
     language: str | None = None,
     timeout: float = 60.0,
+    max_subtitle_duration: float = 6.0,
 ) -> tuple[list[Segment], str]:
     import assemblyai as aai
 
@@ -132,7 +157,7 @@ def _transcribe_assemblyai(
     if transcript.status == aai.TranscriptStatus.error:
         raise RuntimeError(transcript.error)
 
-    segments = _sentences_to_segments(transcript.get_sentences())
+    segments = _words_to_segments(transcript.words or [], max_subtitle_duration)
     detected = transcript.json_response.get("language_code") or language or "unknown"
     return segments, detected
 
@@ -152,6 +177,7 @@ def transcribe(audio_path: str, cfg, language: str | None = None) -> tuple[list[
                 speech_models=cfg.assemblyai_speech_models,
                 language=language,
                 timeout=cfg.request_timeout,
+                max_subtitle_duration=cfg.max_subtitle_duration,
             )
         except Exception as e:
             # Broad on purpose: the user opted into "if AssemblyAI is unavailable,

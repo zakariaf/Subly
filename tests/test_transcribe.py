@@ -7,29 +7,49 @@ from subtrans.config import Config
 from subtrans.transcribe import Segment
 
 
-def _sentence(start_ms, end_ms, text):
-    """Stand-in for an AssemblyAI SDK Sentence (timestamps in milliseconds)."""
-    return SimpleNamespace(start=start_ms, end=end_ms, text=text)
+def _word(start_ms, end_ms, text):
+    """Stand-in for an AssemblyAI SDK Word (timestamps in milliseconds)."""
+    return SimpleNamespace(start=start_ms, end=end_ms, text=text, confidence=1.0)
 
 
 def _explode(*args, **kwargs):
     raise AssertionError("the AssemblyAI backend must not run here")
 
 
-# --- _sentences_to_segments: ms -> s, strip, drop empties, preserve order ---
+# --- _words_to_segments: pack timed words into capped, in-sync subtitle cues ---
 
-def test_sentences_to_segments_converts_ms_to_seconds():
-    out = transcribe._sentences_to_segments(
-        [_sentence(0, 1500, "Hello."), _sentence(1500, 3200, "World.")]
+def test_words_pack_into_one_cue_when_short():
+    out = transcribe._words_to_segments(
+        [_word(0, 500, "Hello"), _word(500, 1000, "there")], max_duration=6.0
     )
-    assert out == [Segment(0.0, 1.5, "Hello."), Segment(1.5, 3.2, "World.")]
+    assert out == [Segment(0.0, 1.0, "Hello there")]
 
 
-def test_sentences_to_segments_strips_and_drops_empty():
-    out = transcribe._sentences_to_segments(
-        [_sentence(0, 1000, "  Hi  "), _sentence(1000, 2000, "   "), _sentence(2000, 3000, "")]
+def test_words_split_when_duration_exceeds_cap():
+    out = transcribe._words_to_segments(
+        [_word(0, 3000, "one"), _word(3000, 6000, "two"), _word(6000, 9000, "three")],
+        max_duration=6.0,
     )
-    assert out == [Segment(0.0, 1.0, "Hi")]
+    assert out == [Segment(0.0, 6.0, "one two"), Segment(6.0, 9.0, "three")]
+
+
+def test_words_split_on_char_cap():
+    words = [_word(i * 100, i * 100 + 100, "alpha") for i in range(20)]
+    out = transcribe._words_to_segments(words, max_duration=60.0)
+    assert len(out) > 1
+    assert all(len(s.text) <= 84 for s in out)
+
+
+def test_words_skip_empty_text_and_preserve_order():
+    out = transcribe._words_to_segments(
+        [_word(0, 500, "Hi"), _word(500, 600, "  "), _word(600, 1000, "there")],
+        max_duration=6.0,
+    )
+    assert out == [Segment(0.0, 1.0, "Hi there")]
+
+
+def test_no_words_yields_no_segments():
+    assert transcribe._words_to_segments([], max_duration=6.0) == []
 
 
 # --- transcribe() dispatch + the Whisper fallback ---

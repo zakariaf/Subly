@@ -9,7 +9,7 @@ _ENV_VARS = [
     "ASSEMBLYAI_API_KEY", "ASSEMBLYAI_BASE_URL", "ASSEMBLYAI_SPEECH_MODELS",
     "LLM_API_KEY", "LLM_BASE_URL", "TRANSLATION_MODEL", "TRANSLATION_BATCH_SIZE",
     "REQUEST_TIMEOUT", "MAX_RETRIES", "DEFAULT_TARGET_LANGUAGE",
-    "MAX_CONCURRENT_JOBS", "MAX_CONCURRENT_BURNS",
+    "MAX_CONCURRENT_JOBS", "MAX_CONCURRENT_BURNS", "MAX_SUBTITLE_DURATION",
 ]
 
 
@@ -37,6 +37,7 @@ def test_defaults(monkeypatch):
     assert cfg.default_target_language == "English"
     assert cfg.max_concurrent_jobs == 4
     assert cfg.max_concurrent_burns == 1
+    assert cfg.max_subtitle_duration == 6.0
 
 
 def test_local_bot_api_mode(monkeypatch):

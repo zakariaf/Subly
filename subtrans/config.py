@@ -70,6 +70,12 @@ class Config:
     # parallel jobs from thrashing the CPU; raise only on a large multi-core host.
     max_concurrent_burns: int = 1
 
+    # --- Subtitles ---
+    # Longest a single subtitle cue may span (seconds). AssemblyAI returns whole
+    # sentences, which can run 20-30s; we repack its word timestamps into cues no
+    # longer than this so lines stay short and readable.
+    max_subtitle_duration: float = 6.0
+
     # --- Defaults ---
     default_target_language: str = "English"
 
@@ -102,5 +108,6 @@ class Config:
             max_retries=int(_get("MAX_RETRIES", "2")),
             max_concurrent_jobs=int(_get("MAX_CONCURRENT_JOBS", "4")),
             max_concurrent_burns=int(_get("MAX_CONCURRENT_BURNS", "1")),
+            max_subtitle_duration=float(_get("MAX_SUBTITLE_DURATION", "6")),
             default_target_language=_get("DEFAULT_TARGET_LANGUAGE", "English"),
         )
