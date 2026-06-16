@@ -76,3 +76,33 @@ def test_rtl_wraps_each_translated_line_in_embedding_marks():
 def test_ltr_has_no_embedding_marks():
     srt = build_srt([Segment(0.0, 1.0, "Hello")], ["Hola"], rtl=False)
     assert "\u202b" not in srt and "\u202c" not in srt
+
+
+# --- Honorific ligatures (RTL only) ---------------------------------------- #
+
+def test_rtl_collapses_sallallahu_to_ligature():
+    srt = build_srt([Segment(0.0, 1.0, "x")], ["\u0645\u062d\u0645\u062f \u0635\u0644\u0649 \u0627\u0644\u0644\u0647 \u0639\u0644\u064a\u0647 \u0648\u0633\u0644\u0645"], rtl=True)
+    assert "\ufdfa" in srt              # \ufdfa
+    assert "\u0639\u0644\u064a\u0647 \u0648\u0633\u0644\u0645" not in srt        # the spelled-out form is gone
+
+
+def test_rtl_collapses_jalla_jalaluhu_to_ligature():
+    srt = build_srt([Segment(0.0, 1.0, "x")], ["\u0627\u0644\u0644\u0647 \u062c\u0644 \u062c\u0644\u0627\u0644\u0647"], rtl=True)
+    assert "\ufdfb" in srt              # \ufdfb
+
+
+def test_rtl_collapses_persian_spelling_of_sallallahu():
+    # Persian/Kurdish use Farsi yeh (ی U+06CC), not Arabic yeh — must still match.
+    srt = build_srt([Segment(0.0, 1.0, "x")], ["محمد صلی الله علیه وسلم"], rtl=True)
+    assert "ﷺ" in srt
+
+
+def test_honorific_match_is_whitespace_flexible():
+    srt = build_srt([Segment(0.0, 1.0, "x")], ["\u0635\u0644\u0649   \u0627\u0644\u0644\u0647  \u0639\u0644\u064a\u0647   \u0648\u0633\u0644\u0645"], rtl=True)
+    assert "\ufdfa" in srt
+
+
+def test_ltr_leaves_honorific_phrases_untouched():
+    srt = build_srt([Segment(0.0, 1.0, "x")], ["\u0635\u0644\u0649 \u0627\u0644\u0644\u0647 \u0639\u0644\u064a\u0647 \u0648\u0633\u0644\u0645"], rtl=False)
+    assert "\ufdfa" not in srt
+    assert "\u0635\u0644\u0649 \u0627\u0644\u0644\u0647 \u0639\u0644\u064a\u0647 \u0648\u0633\u0644\u0645" in srt
