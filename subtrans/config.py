@@ -78,6 +78,10 @@ class Config:
     # A silence longer than this (seconds) between two words ends the current cue,
     # so lines break at natural speech pauses rather than mid-phrase.
     max_subtitle_gap: float = 1.0
+    # Opt-in (V2): let the translation LLM decide where to break words into cues,
+    # instead of the rule-based gap/duration packing. Falls back to the rules on any
+    # failure. AssemblyAI backend only; costs one extra LLM call per job.
+    ai_segmentation: bool = False
 
     # --- Defaults ---
     default_target_language: str = "English"
@@ -113,5 +117,6 @@ class Config:
             max_concurrent_burns=int(_get("MAX_CONCURRENT_BURNS", "1")),
             max_subtitle_duration=float(_get("MAX_SUBTITLE_DURATION", "6")),
             max_subtitle_gap=float(_get("MAX_SUBTITLE_GAP", "1")),
+            ai_segmentation=_get("AI_SEGMENTATION").lower() in ("1", "true", "yes"),
             default_target_language=_get("DEFAULT_TARGET_LANGUAGE", "English"),
         )

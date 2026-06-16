@@ -77,12 +77,16 @@ def test_assemblyai_backend_without_key_uses_local(monkeypatch):
     assert transcribe.transcribe("a.wav", cfg) == ([Segment(0, 1, "local")], "en")
 
 
-def test_assemblyai_backend_with_key_uses_assemblyai(monkeypatch):
-    expected = ([Segment(0, 2, "from aai")], "ar")
-    monkeypatch.setattr(transcribe, "_transcribe_assemblyai", lambda *a, **k: expected)
+def test_assemblyai_backend_with_key_segments_words(monkeypatch):
+    # The AssemblyAI backend returns raw words; transcribe() packs them into cues
+    # (rule-based by default, since AI_SEGMENTATION is off).
+    words = [_word(0, 500, "Hello"), _word(500, 1000, "there")]
+    monkeypatch.setattr(transcribe, "_transcribe_assemblyai", lambda *a, **k: (words, "ar"))
     monkeypatch.setattr(transcribe, "_transcribe_local", _explode)
     cfg = Config(transcribe_backend="assemblyai", assemblyai_api_key="key123")
-    assert transcribe.transcribe("a.wav", cfg) == expected
+    segments, detected = transcribe.transcribe("a.wav", cfg)
+    assert detected == "ar"
+    assert segments == [Segment(0.0, 1.0, "Hello there")]
 
 
 def test_assemblyai_failure_falls_back_to_local(monkeypatch):

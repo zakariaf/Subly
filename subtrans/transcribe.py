@@ -142,9 +142,12 @@ def _transcribe_assemblyai(
     speech_models: tuple[str, ...] = ("universal-2",),
     language: str | None = None,
     timeout: float = 60.0,
-    max_subtitle_duration: float = 6.0,
-    max_subtitle_gap: float = 1.0,
-) -> tuple[list[Segment], str]:
+) -> tuple[list, str]:
+    """Transcribe with AssemblyAI; return its word list (ms timestamps) + detected language.
+
+    Grouping words into subtitle cues is the caller's job (see `_segment`), so this
+    function does one thing: get the transcript.
+    """
     import assemblyai as aai
 
     aai.settings.api_key = api_key
@@ -160,29 +163,36 @@ def _transcribe_assemblyai(
     if transcript.status == aai.TranscriptStatus.error:
         raise RuntimeError(transcript.error)
 
-    segments = _words_to_segments(transcript.words or [], max_subtitle_duration, max_subtitle_gap)
     detected = transcript.json_response.get("language_code") or language or "unknown"
-    return segments, detected
+    return transcript.words or [], detected
 
 
 # --------------------------------------------------------------------------- #
 # Public entry point
 # --------------------------------------------------------------------------- #
 
+def _segment(words: list, cfg) -> list[Segment]:
+    """Group transcribed words into subtitle cues — AI (V2) or rule-based (V1)."""
+    if cfg.ai_segmentation:
+        from .segment import segment_words
+
+        return segment_words(words, cfg)
+    return _words_to_segments(words, cfg.max_subtitle_duration, cfg.max_subtitle_gap)
+
+
 def transcribe(audio_path: str, cfg, language: str | None = None) -> tuple[list[Segment], str]:
     """Dispatch to the configured backend. `cfg` is a subtrans.config.Config."""
     if cfg.transcribe_backend == "assemblyai" and cfg.assemblyai_api_key:
         try:
-            return _transcribe_assemblyai(
+            words, detected = _transcribe_assemblyai(
                 audio_path,
                 api_key=cfg.assemblyai_api_key,
                 base_url=cfg.assemblyai_base_url,
                 speech_models=cfg.assemblyai_speech_models,
                 language=language,
                 timeout=cfg.request_timeout,
-                max_subtitle_duration=cfg.max_subtitle_duration,
-                max_subtitle_gap=cfg.max_subtitle_gap,
             )
+            return _segment(words, cfg), detected
         except Exception as e:
             # Broad on purpose: the user opted into "if AssemblyAI is unavailable,
             # use Whisper", so every failure mode (network, auth, quota, outage) must
