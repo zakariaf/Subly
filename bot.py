@@ -5,8 +5,8 @@ Usage:
     /lang <language>     — set your target language (persists per chat for the session)
     /output srt|video|both, /bilingual
     send a video/audio   — if no language is set, the bot shows a language picker;
-                           tap one (or caption the file with a language name) and it
-                           transcribes, translates, and returns the subtitles.
+                           tap one (or use /lang) and it transcribes, translates,
+                           and returns the subtitles.
 
 Heavy work (ffmpeg, Whisper, the LLM calls) is blocking, so each stage runs in a
 worker thread via asyncio.to_thread; the bot edits a status message between stages
@@ -16,6 +16,7 @@ so the event loop never stalls and the user sees progress.
 import asyncio
 import logging
 import os
+import re
 import shutil
 import tempfile
 
@@ -48,7 +49,7 @@ CFG = Config.from_env()
 _BURN_SEMAPHORE = asyncio.Semaphore(CFG.max_concurrent_burns)
 
 # Quick-pick languages shown when a chat hasn't chosen one yet. Any other language
-# is still reachable with `/lang <language>` or by captioning the file.
+# is still reachable with `/lang <language>`.
 LANGUAGES = ["English", "Persian", "Kurdish (Sorani)", "Spanish", "German", "Arabic"]
 
 STAGE_TEXT = {
@@ -98,8 +99,8 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "   • video — the video with subtitles burned in\n"
         "   • both — .srt *and* the burned video (default)\n"
         "/bilingual — toggle keeping the original text under each line\n\n"
-        "Just send a file: if no language is set I'll show buttons to pick one. "
-        "You can also caption a file with a language name to override for that one file.\n"
+        "Just send a file: if no language is set I'll show buttons to pick one "
+        "(or set it with /lang). Captions on files are ignored.\n"
         "Note: 'video' re-encodes (slow on CPU) and burns the text onto the picture "
         "so it shows in Telegram's player. Audio-only files always come back as .srt.",
     )
@@ -160,6 +161,15 @@ def _language_keyboard(pending_key: str) -> InlineKeyboardMarkup:
 # File handling
 # --------------------------------------------------------------------------- #
 
+def _safe_filename(text: str) -> str:
+    """Slug safe as a single path component — strips separators and odd characters.
+
+    The target language reaches us as free text (via /lang), so a value like
+    'Chinese/Mandarin' must not turn into directories when we build the SRT path.
+    """
+    return re.sub(r"[^\w.\- ]", "_", text).strip() or "subtitles"
+
+
 def _pick_media(update: Update):
     """Return (telegram_file_object, original_filename) or (None, None)."""
     msg = update.message
@@ -190,17 +200,10 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         )
         return
 
-    # Language: a caption you add wins, else the chat's saved language, else ask.
-    # A forwarded message carries the *original's* caption (not a language you chose),
-    # so ignore captions on forwards — otherwise an unrelated caption like "watch this"
-    # would be treated as the target language.
-    caption = (update.message.caption or "").strip()
+    # Language comes only from /lang (saved per chat) or the picker — never the
+    # file's caption, which is unreliable (it can be a URL, a comment, anything).
     chat_lang = _chat_language(context)
-    if caption and update.message.forward_origin is None:
-        target = caption.title()
-    elif chat_lang:
-        target = chat_lang
-    else:
+    if not chat_lang:
         key = str(update.message.message_id)
         context.chat_data.setdefault("pending_media", {})[key] = {
             "file_id": media.file_id, "filename": filename,
@@ -215,7 +218,7 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     status = await update.message.reply_text("⬇️ Downloading…")
     await context.bot.send_chat_action(update.effective_chat.id, ChatAction.TYPING)
     await _process_media(
-        context, update.effective_chat.id, media.file_id, filename, target, bilingual, status
+        context, update.effective_chat.id, media.file_id, filename, chat_lang, bilingual, status
     )
 
 
@@ -286,8 +289,8 @@ async def _process_media(context, chat_id, file_id, filename, target, bilingual,
         await show("build")
         srt_text = build_srt(segments, translations, bilingual=bilingual, rtl=is_rtl(target))
 
-        base = os.path.splitext(filename)[0]
-        srt_path = os.path.join(workdir, f"{base}.{target.lower()}.srt")
+        stem = _safe_filename(f"{os.path.splitext(filename)[0]}.{target.lower()}")
+        srt_path = os.path.join(workdir, f"{stem}.srt")
         with open(srt_path, "w", encoding="utf-8") as f:
             f.write(srt_text)
 
@@ -306,7 +309,7 @@ async def _process_media(context, chat_id, file_id, filename, target, bilingual,
         # Burn the subtitles into the video and send it back.
         if mode in ("video", "both") and is_video:
             await show("burn")
-            burned_path = os.path.join(workdir, f"{base}.{target.lower()}.subbed.mp4")
+            burned_path = os.path.join(workdir, f"{stem}.subbed.mp4")
             # Gate the re-encode so parallel jobs don't all burn at once (CPU).
             async with _BURN_SEMAPHORE:
                 await asyncio.to_thread(burn_subtitles, media_path, srt_path, burned_path, target)

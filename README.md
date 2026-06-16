@@ -74,8 +74,8 @@ python bot.py
 Then in Telegram, send a video or audio file. If you haven't set a language yet, the
 bot shows a **language picker** — tap one (English, Persian, Kurdish (Sorani),
 Spanish, German, Arabic) or use `/lang <any other language>`. `/output srt|video|both`
-picks what's returned; `/bilingual` keeps the original under each translated line;
-caption a file with a language name to override it for one file.
+picks what's returned; `/bilingual` keeps the original under each translated line.
+File captions are ignored — set the language with `/lang` or the picker.
 
 Right-to-left languages (Persian, Arabic, Kurdish Sorani, …) render with the correct
 bidi direction, so embedded Latin words and numbers stay in place — in both the `.srt`
