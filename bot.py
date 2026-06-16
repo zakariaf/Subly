@@ -41,6 +41,12 @@ logger = logging.getLogger(__name__)
 
 CFG = Config.from_env()
 
+# Bounds simultaneous video burns (the CPU-heavy re-encode). With concurrent jobs,
+# unbounded burns would thrash the VM — x264 already uses every core, so one at a
+# time is usually right. Module-level like transcribe._model_cache; on 3.10+ a
+# Semaphore needs no running loop at construction, only when first awaited.
+_BURN_SEMAPHORE = asyncio.Semaphore(CFG.max_concurrent_burns)
+
 # Quick-pick languages shown when a chat hasn't chosen one yet. Any other language
 # is still reachable with `/lang <language>` or by captioning the file.
 LANGUAGES = ["English", "Persian", "Kurdish (Sorani)", "Spanish", "German", "Arabic"]
@@ -301,7 +307,9 @@ async def _process_media(context, chat_id, file_id, filename, target, bilingual,
         if mode in ("video", "both") and is_video:
             await show("burn")
             burned_path = os.path.join(workdir, f"{base}.{target.lower()}.subbed.mp4")
-            await asyncio.to_thread(burn_subtitles, media_path, srt_path, burned_path, target)
+            # Gate the re-encode so parallel jobs don't all burn at once (CPU).
+            async with _BURN_SEMAPHORE:
+                await asyncio.to_thread(burn_subtitles, media_path, srt_path, burned_path, target)
 
             burned_mb = os.path.getsize(burned_path) / (1024 * 1024)
             if burned_mb > CFG.send_limit_mb:
@@ -365,7 +373,11 @@ def main() -> None:
     if not CFG.telegram_token:
         raise SystemExit("Set TELEGRAM_BOT_TOKEN in your environment / .env file.")
 
-    builder = Application.builder().token(CFG.telegram_token)
+    # Process updates concurrently so jobs run in parallel instead of one-at-a-time;
+    # the burn step is bounded separately by _BURN_SEMAPHORE.
+    builder = Application.builder().token(CFG.telegram_token).concurrent_updates(
+        CFG.max_concurrent_jobs
+    )
     # Point at a local Bot API server (lifts the 20/50 MB caps) when configured;
     # otherwise PTB defaults to Telegram's cloud API.
     if CFG.telegram_api_base:

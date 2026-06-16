@@ -61,6 +61,15 @@ class Config:
     request_timeout: float = 60.0
     max_retries: int = 2
 
+    # --- Concurrency ---
+    # Media jobs processed in parallel (Telegram updates handled concurrently).
+    # I/O-bound stages (transcribe/translate) overlap across jobs; the CPU-bound
+    # video burn is bounded separately below.
+    max_concurrent_jobs: int = 4
+    # Simultaneous video burns (re-encode). x264 already uses every core, so 1 keeps
+    # parallel jobs from thrashing the CPU; raise only on a large multi-core host.
+    max_concurrent_burns: int = 1
+
     # --- Defaults ---
     default_target_language: str = "English"
 
@@ -91,5 +100,7 @@ class Config:
             translation_batch_size=int(_get("TRANSLATION_BATCH_SIZE", "40")),
             request_timeout=float(_get("REQUEST_TIMEOUT", "60")),
             max_retries=int(_get("MAX_RETRIES", "2")),
+            max_concurrent_jobs=int(_get("MAX_CONCURRENT_JOBS", "4")),
+            max_concurrent_burns=int(_get("MAX_CONCURRENT_BURNS", "1")),
             default_target_language=_get("DEFAULT_TARGET_LANGUAGE", "English"),
         )

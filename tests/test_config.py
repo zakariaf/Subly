@@ -9,6 +9,7 @@ _ENV_VARS = [
     "ASSEMBLYAI_API_KEY", "ASSEMBLYAI_BASE_URL", "ASSEMBLYAI_SPEECH_MODELS",
     "LLM_API_KEY", "LLM_BASE_URL", "TRANSLATION_MODEL", "TRANSLATION_BATCH_SIZE",
     "REQUEST_TIMEOUT", "MAX_RETRIES", "DEFAULT_TARGET_LANGUAGE",
+    "MAX_CONCURRENT_JOBS", "MAX_CONCURRENT_BURNS",
 ]
 
 
@@ -34,6 +35,8 @@ def test_defaults(monkeypatch):
     assert cfg.request_timeout == 60.0
     assert cfg.max_retries == 2
     assert cfg.default_target_language == "English"
+    assert cfg.max_concurrent_jobs == 4
+    assert cfg.max_concurrent_burns == 1
 
 
 def test_local_bot_api_mode(monkeypatch):
@@ -70,6 +73,15 @@ def test_assemblyai_speech_models_parsed_from_csv(monkeypatch):
     _clear_env(monkeypatch)
     monkeypatch.setenv("ASSEMBLYAI_SPEECH_MODELS", " universal-3-pro , universal-2 ")
     assert Config.from_env().assemblyai_speech_models == ("universal-3-pro", "universal-2")
+
+
+def test_concurrency_overrides(monkeypatch):
+    _clear_env(monkeypatch)
+    monkeypatch.setenv("MAX_CONCURRENT_JOBS", "10")
+    monkeypatch.setenv("MAX_CONCURRENT_BURNS", "2")
+    cfg = Config.from_env()
+    assert cfg.max_concurrent_jobs == 10
+    assert cfg.max_concurrent_burns == 2
 
 
 def test_values_are_stripped(monkeypatch):
