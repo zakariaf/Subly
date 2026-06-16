@@ -57,7 +57,9 @@ env:
   clear:
     PYTHONUNBUFFERED: "1"
     # Transcription runs locally on CPU by default (no GPU). Set to "openai" to
-    # offload to the OpenAI Whisper API (then OPENAI_API_KEY is required).
+    # offload to the OpenAI Whisper API (then OPENAI_API_KEY is required), or
+    # "assemblyai" for AssemblyAI STT (then ASSEMBLYAI_API_KEY is required; falls
+    # back to local Whisper on any failure). EU: ASSEMBLYAI_BASE_URL=https://api.eu.assemblyai.com
     TRANSCRIBE_BACKEND: local
     WHISPER_MODEL: medium          # tiny | base | small | medium | large-v3
     # Translation LLM — any OpenAI-compatible endpoint:
@@ -79,6 +81,7 @@ env:
     - TELEGRAM_BOT_TOKEN
     - LLM_API_KEY                 # translation provider key (OpenAI, DeepSeek, ...)
     # - OPENAI_API_KEY            # also required if TRANSCRIBE_BACKEND=openai
+    # - ASSEMBLYAI_API_KEY        # also required if TRANSCRIBE_BACKEND=assemblyai
 
 # faster-whisper model cache (persisted across deploys); the second volume is
 # shared with the bot-api accessory so the bot can read the big files it downloads.
