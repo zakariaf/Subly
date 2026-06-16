@@ -69,6 +69,9 @@ env:
     LLM_BASE_URL: https://api.deepseek.com
     TRANSLATION_MODEL: deepseek-v4-pro
     TRANSLATION_BATCH_SIZE: "500"  # segments per LLM request;
+    # 500-segment batches with the self-reviewing prompt routinely exceed the 60s
+    # default, so give each request room instead of timing out and retrying.
+    REQUEST_TIMEOUT: "180"
     # Other tunables fall back to subtrans/config.py defaults (see .env.example).
     #
     # Big files: route through the local Bot API server accessory below (lifts the
