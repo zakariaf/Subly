@@ -97,6 +97,16 @@ def test_prompt_keeps_process_and_output_contract():
     assert "<glossary>" in p and "<translation>" in p
 
 
+def test_prompt_permits_within_sentence_redistribution():
+    # A sentence split across cues may be re-spread across its own lines so it reads
+    # naturally — but never across a sentence boundary, and the id count/order is
+    # untouched (the timeline stays sacred; only word-to-cue locality is relaxed).
+    p = translate.SYSTEM_PROMPT.lower()
+    assert "sentence" in p and "redistribute" in p
+    assert "sentence boundary" in p
+    assert "one id in -> one id out" in p
+
+
 # --- the id-stability invariant -------------------------------------------- #
 
 def test_missing_ids_fall_back_to_original(monkeypatch):

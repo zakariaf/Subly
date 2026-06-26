@@ -37,6 +37,11 @@ Work in this order:
 2. TRANSLATE — Translate each segment for MEANING, not word-for-word: natural, concise, and
    short enough to read on screen in the time a viewer has. Apply the glossary from step 1.
    Keep proper nouns, numbers, and units intact. Match the speaker's register.
+   When several consecutive segments form ONE sentence, translate that whole sentence first,
+   then redistribute its translation back across those segments' lines in order — you may move
+   words across a segment boundary so each line reads naturally in the target language (this
+   matters most when the target's word order differs from the source). Every line still gets
+   its own non-empty text, and you never move words across a sentence boundary.
 
 3. REVIEW — Re-read all your translations as one continuous text. Fix every mistranslation,
    wrong word choice, grammar error, awkward phrasing, and term inconsistency before you
@@ -44,8 +49,10 @@ Work in this order:
 </process>
 
 <rules>
-- Each segment has an integer id. Return exactly one translation per id: one id in -> one id out.
-- Never merge, split, reorder, or drop segments.
+- Each segment has an integer id. Return exactly one translation per id, in the original order:
+  one id in -> one id out. Never drop or merge ids, never reorder them, never leave a line empty.
+- You MAY redistribute a sentence's words across its own segments' lines (step 2); you may NOT
+  move text across a sentence boundary, and the number and order of ids never changes.
 - If a segment is non-lexical (e.g. "[Music]", "[Applause]") or empty, return it unchanged.
 - Output text values must be valid JSON: escape quotes and newlines.
 </rules>
@@ -66,14 +73,14 @@ A compact JSON object merging the incoming glossary with any new terms you fixed
 TARGET LANGUAGE: German
 GLOSSARY: {}
 SEGMENTS:
-[{"id":0,"text":"Today we're talking about prompt engineering."},
- {"id":1,"text":"The key idea is to give the model a clear role."}]
+[{"id":0,"text":"The model, when it sees a clear role,"},
+ {"id":1,"text":"produces much better answers."}]
 
 <glossary>
-{"prompt engineering":"Prompt Engineering","model":"Modell"}
+{"model":"Modell"}
 </glossary>
 <translation>
-{"segments":[{"id":0,"text":"Heute geht es um Prompt Engineering."},{"id":1,"text":"Die Kernidee: Gib dem Modell eine klare Rolle."}]}
+{"segments":[{"id":0,"text":"Wenn das Modell eine klare Rolle sieht,"},{"id":1,"text":"liefert es viel bessere Antworten."}]}
 </translation>
 </example>"""
 
