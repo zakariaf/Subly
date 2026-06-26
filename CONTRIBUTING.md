@@ -131,6 +131,10 @@ timestamps. So:
 - Any id the model fails to return **falls back to the original text**
   (`translate.translate_segments`), so the output list is **never shorter than the
   transcript** and timestamps always line up.
+- The translator **may redistribute one sentence's words across that sentence's own
+  lines** so it reads naturally when the target language's word order differs from the
+  source. This relaxes word-to-cue locality only — the line *count*, *order*, and
+  *timestamps* never change, so the subtitles still can't drift.
 
 If you change the translation path, the tests in `tests/test_translate.py`
 (`test_missing_ids_fall_back_to_original`, `test_output_is_never_shorter_than_input`)

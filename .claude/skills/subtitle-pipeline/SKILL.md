@@ -37,13 +37,18 @@ Invoke this skill before:
    that way.
 
 5. **THE INVARIANT — the SRT is never shorter than the transcript, and order is
-   preserved.** Subtitles desync the instant a step merges, splits, reorders, or
-   drops a line relative to the timestamps. So:
+   preserved.** Subtitles desync the instant a step changes the **count or order** of
+   lines relative to the timestamps. So:
    - Every segment carries a **stable integer id** (its index).
    - Any transform that "improves" text (translation, cleanup) must return **one
      output per input id, in the same order**.
    - Missing/failed outputs **fall back to the original text** — never to nothing.
    See `translate.translate_segments`'s final line.
+   - **NOT part of the invariant: word-to-cue locality.** The translator may
+     redistribute one sentence's words across that sentence's own (adjacent) lines so
+     it reads naturally when the target's word order differs from the source. The line
+     *count*, *order*, and *timestamps* stay fixed, so the timeline can't drift — only
+     the exact words under a given cue shift, and only within a single sentence.
 
 6. **Timestamps come from `Segment`, never from the model.** `start`/`end` are set
    by the transcriber and are sacred. The translator only ever changes `text`.

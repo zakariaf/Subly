@@ -47,7 +47,9 @@ simple label instead.)
 Subtitles desync the moment a translator merges or drops a line. Each segment is
 tagged with a stable integer id and the model is told to return the *same ids*;
 any id it fails to return falls back to the original text, so the SRT is **never
-shorter than the transcript** and timestamps always line up.
+shorter than the transcript** and timestamps always line up. When one sentence spans
+several cues, the translation is spread across them so it reads naturally in the
+target language — the line count and timing stay fixed, only the wording shifts.
 
 Within one call the model also works in steps — pin a consistent rendering for each
 recurring term, translate, then self-review and fix — and a small **glossary** of

@@ -203,7 +203,11 @@ pattern updates the relevant `SKILL.md` (and `CONTRIBUTING.md`) in the same PR.
 
 Out of scope unless the user explicitly approves:
 - **TTS / dubbing / audio generation** — Subly produces subtitles, full stop.
-- **Anything that breaks the sync invariant** — no "smart" merging/splitting of lines.
+- **Anything that breaks the sync invariant** — no merging, splitting, reordering, or
+  dropping of **lines**; the line count, order, and timestamps are sacred.
+  (Redistributing one sentence's words across its own lines for natural word order is
+  allowed — it keeps the count and order — and is owned by `subtitle-pipeline` +
+  `llm-translation`.)
 - **Strict `json_schema` / Pydantic `.parse()` translation** that drops support for
   non-OpenAI endpoints — portability is a product promise.
 - **A web UI or a database** — the surface is a Telegram bot and a CLI; per-chat state

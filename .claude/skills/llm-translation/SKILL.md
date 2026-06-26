@@ -48,12 +48,14 @@ Invoke this skill before:
    lives at module level. The per-request data goes in the user message as JSON,
    not concatenated into the prompt.
 
-5. **The prompt enforces the sync contract: one id in → one id out, never merge /
-   split / reorder / drop.** If you edit the prompt, that instruction stays.
-   `_translate_batch` returns `(translations, glossary)`; `translate_segments`
+5. **The prompt enforces the sync contract: one id in → one id out, in order, never
+   merge / split / reorder / drop / empty an id.** If you edit the prompt, that
+   instruction stays. The prompt *does* let the model redistribute a sentence's words
+   across that sentence's own lines for natural word order — that relaxes word-to-cue
+   locality, not the id count / order / timestamps (see the `subtitle-pipeline`
+   skill). `_translate_batch` returns `(translations, glossary)`; `translate_segments`
    threads the glossary from each chunk into the next for consistent terminology and
-   fills any missing id with the original (see the `subtitle-pipeline` skill — this
-   is the invariant).
+   fills any missing id with the original (this is the invariant).
 
 6. **One client per job, batched.** Construct the client once in
    `translate_segments`, then loop batches of `cfg.translation_batch_size`. Don't
